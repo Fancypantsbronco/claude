@@ -2,8 +2,8 @@
   "meta": {
     "name": "Chaos Arena",
     "tagline": "Hybrider Auto-Battler & Gladiatoren-Manager nach dem Tabula-Rasa-Prinzip",
-    "version": "0.3.0",
-    "step": 3,
+    "version": "0.4.0",
+    "step": 4,
     "updated": "2026-10-03",
     "export_command": "python export_project.py",
     "export_file": "project_export.txt"
@@ -356,7 +356,7 @@
         {
           "id": "evolutionen",
           "label": "Evolutionen",
-          "view": "placeholder"
+          "view": "evolution"
         }
       ]
     },
@@ -412,7 +412,7 @@
     },
     "token-abrechnung": {
       "title": "Token-Abrechnung",
-      "lead": "Token-Stapel und Attribute pro Kämpfer über die laufende Saison. Prägung (größter Primär-Stapel) und Gesinnung entscheiden später über die Karten."
+      "lead": "Token, Prägungen und Attribute pro Kämpfer über die laufende Saison."
     },
     "roster": {
       "title": "Team-Roster",
@@ -420,14 +420,7 @@
     },
     "evolutionen": {
       "title": "Evolutionen",
-      "lead": "Nach vielen Kämpfen darf ein Kämpfer aus 3 Karten wählen. Welche Karten erscheinen, bestimmt sein größter Token-Stapel.",
-      "examples": [
-        "Fleischschild (Tank) · braucht 25 Tank-Token und Ausdauer ≥ 5",
-        "Billard-Faust (Damage) · braucht 20 Damage-Token und Stärke ≥ 3: Getroffene krachen in andere Kämpfer",
-        "Schulterschluss (Support) · braucht 15 Support-Token und Bewusstsein ≥ 3",
-        "Abgedrehter Wirbel (Chaos) · braucht 40 Chaos-Token und Geschick ≥ 2",
-        "Zäher Hund (Neutral) · kostet 30 Neutral-Token: +5 Lebenspunkte, wenn keine passende Karte erscheint"
-      ]
+      "lead": "Nach jedem Kampf werden Token zu Prägungen. 2 Kämpfer pro Team ziehen 3 bezahlbare Karten und wählen eine. Hier stehen der Kartenpool und alle bisherigen Evolutionen der Saison."
     },
     "modelle": {
       "title": "3D-Modelle",
@@ -506,7 +499,7 @@
       },
       {
         "title": "Evolution",
-        "text": "Der größte Primär-Stapel und die Gesinnung bestimmen, welche 3 Karten ein Kämpfer ziehen darf. Starke Karten verlangen zusätzlich Mindestwerte, z. B. Ausdauer 5. Neutral-Token kaufen einfache Werte-Karten."
+        "text": "Nach jedem Kampf wird der größte Token-Stapel zu einer permanenten Prägung. 2 Kämpfer pro Team ziehen 3 Karten, die sie mit Prägungen bezahlen können, und wählen eine."
       }
     ],
     "style": [
@@ -563,23 +556,24 @@
     },
     {
       "step": 4,
-      "title": "Saison speichern",
-      "status": "proposal",
+      "title": "Evolutions-Phase",
+      "status": "done",
       "items": [
-        "Saison dauerhaft speichern statt nur in der Sitzung",
-        "Mehrere Kämpfe automatisch hintereinander",
-        "Verlauf pro Kämpfer"
+        "Token-Abrechnung: größter Stapel wird zu 1 Prägung, dazu 1 Neutral-Prägung",
+        "2 Kämpfer pro Team ziehen 3 bezahlbare Karten",
+        "Basis-Kartenpool mit 9 Karten, alle Effekte im Kampf aktiv",
+        "Eigenes Fenster nach dem Kampf, Export als Download"
       ]
     },
     {
       "step": 5,
-      "title": "Evolution",
+      "title": "Saison speichern & mehr Karten",
       "status": "proposal",
       "items": [
-        "3-Karten-Auswahl nach Prägung und Gesinnung",
-        "Karten mit Mindestwerten (z. B. Fleischschild ab Ausdauer 5)",
-        "Neutral-Token für einfache Werte-Karten",
-        "Körperbau verändert sich mit der Evolution"
+        "Saison dauerhaft speichern statt nur in der Sitzung",
+        "Support- und Hell-Karten, damit diese Token Prägungen erzeugen",
+        "Körperbau verändert sich mit den Karten",
+        "Mehrere Kämpfe automatisch hintereinander"
       ]
     },
     {
@@ -643,6 +637,19 @@
         "Learning by Doing: Nach jedem Kampf wachsen die Attribute aus dem Kampfprotokoll. Die Werte gelten für die laufende Saison (Sitzung).",
         "Auswertung zeigt Prägung, Gesinnung und Attribut-Zuwachs. Token-Abrechnung wird zur Saison-Ansicht. tools/balance.js simuliert ganze Saisons."
       ]
+    },
+    {
+      "version": "0.4.0",
+      "date": "2026-10-03",
+      "title": "Evolutions-Phase, eigenes Fenster nach dem Kampf, Export als Download",
+      "changes": [
+        "Nach dem Kampf öffnet sich ein eigenes Fenster mit drei Schritten: Auswertung, Prägungen, Evolution. Es ersetzt die Tabelle, die in den Viewport gequetscht war.",
+        "Token-Abrechnung: Der größte Stapel aus Damage, Tank, Chaos und Dunkel wird zu 1 permanenten Prägung, dazu 1 Neutral-Prägung pro Kampf.",
+        "Pro Team ziehen 2 zufällige Kämpfer je 3 bezahlbare Karten. Die gewählte Karte kostet Prägungen und wirkt ab dem nächsten Kampf.",
+        "Basis-Kartenpool mit 9 Karten (Hornhaut, Schmerz-Echo, Verräter, Kurzsichtiger Berserker, Tornado-Faust, Brillen-Träger, Blutdurst, Ochsenlunge, Adrenalin-Schub). Alle Effekte sind in der Kampf-Engine umgesetzt.",
+        "Weniger Widgets: Der Inspector erscheint nur, wenn ein Kämpfer ausgewählt ist. Die Konsole lässt sich einklappen.",
+        "Export: Knopf in der Statusleiste lädt den kompletten Code als .txt herunter. export_project.py schreibt lokal nach ~/Downloads."
+      ]
     }
   ],
   "attributes": [
@@ -690,6 +697,195 @@
       "id": "secondary",
       "label": "Sekundär",
       "text": "Waffen- und Elementaraffinitäten aus absurden Unfällen. Braucht Gegenstände und Umweltgefahren, die es in der Arena noch nicht gibt."
+    }
+  ],
+  "evolution": {
+    "imprint_tokens": [
+      "damage",
+      "tank",
+      "chaos",
+      "dark"
+    ],
+    "neutral_per_fight": 1,
+    "evolvers_per_team": 2,
+    "cards_drawn": 3,
+    "notes": [
+      "Token-Abrechnung: Der größte Stapel aus Damage, Tank, Chaos und Dunkel wird zu 1 permanenten Prägung. Bei Gleichstand entscheidet der Zufall. Wer teilgenommen hat, bekommt zusätzlich 1 Neutral-Prägung.",
+      "Pro Team dürfen 2 zufällig gewählte Kämpfer eine Evolution durchführen.",
+      "Für jeden von ihnen zieht das System 3 verschiedene Karten, die er mit seinen Prägungen bezahlen kann. Die Prägungen werden erst beim Wählen ausgegeben.",
+      "Verhaltenskarten gibt es nur einmal pro Kämpfer, reine Werte-Karten (Ochsenlunge, Adrenalin-Schub) lassen sich stapeln.",
+      "Support- und Hell-Token werden weiter gesammelt, erzeugen aber noch keine Prägung, weil es noch keine Karten dafür gibt."
+    ]
+  },
+  "card_categories": [
+    {
+      "id": "tank",
+      "label": "Tank",
+      "text": "Fokus auf Überleben",
+      "color": "#6fae5f"
+    },
+    {
+      "id": "dark",
+      "label": "Dunkel / Chaos",
+      "text": "Friendly Fire & Orientierungslosigkeit",
+      "color": "#a67fd8"
+    },
+    {
+      "id": "focus",
+      "label": "Erwachen / Fokus",
+      "text": "Die Intelligenz steigt",
+      "color": "#59c3e0"
+    },
+    {
+      "id": "neutral",
+      "label": "Neutral",
+      "text": "Basis-Upgrades für überschüssige Prägungen",
+      "color": "#b5b0a6"
+    }
+  ],
+  "cards": [
+    {
+      "id": "hornhaut",
+      "name": "Hornhaut",
+      "category": "tank",
+      "costs": [
+        {
+          "tank": 1
+        }
+      ],
+      "effect": "Eingehender physischer Schaden wird um 20 % reduziert. Die Bewegungsgeschwindigkeit sinkt um 10 %.",
+      "params": {
+        "damage_taken_mult": 0.8,
+        "move_mult": 0.9
+      }
+    },
+    {
+      "id": "schmerz-echo",
+      "name": "Schmerz-Echo",
+      "category": "tank",
+      "costs": [
+        {
+          "tank": 2
+        }
+      ],
+      "effect": "Sobald der Charakter Schaden erleidet, fügt er dem Angreifer automatisch 10 % des erlittenen Schadens als Rückstoß-Schaden zu.",
+      "params": {
+        "reflect": 0.1
+      }
+    },
+    {
+      "id": "verraeter",
+      "name": "Verräter",
+      "category": "dark",
+      "costs": [
+        {
+          "dark": 1
+        }
+      ],
+      "effect": "Der Charakter macht 20 % mehr Schaden gegen eigene Leute und heilt sich um den angerichteten Schaden. Erzeugt weiterhin Dunkel-Token.",
+      "params": {
+        "friendly_damage_mult": 1.2,
+        "friendly_heal": 1.0
+      }
+    },
+    {
+      "id": "berserker",
+      "name": "Kurzsichtiger Berserker",
+      "category": "dark",
+      "costs": [
+        {
+          "dark": 1,
+          "chaos": 1
+        }
+      ],
+      "effect": "Trifft weiterhin alles (keine Freund-Feind-Erkennung), macht ab sofort aber Flächenschaden: Jeder Schlag trifft alle Ziele im Umkreis von 1,1 m.",
+      "params": {
+        "aoe_radius_m": 1.1,
+        "recognize": 0
+      },
+      "excludes": [
+        "brillen-traeger"
+      ]
+    },
+    {
+      "id": "tornado-faust",
+      "name": "Tornado-Faust",
+      "category": "dark",
+      "costs": [
+        {
+          "chaos": 1
+        }
+      ],
+      "effect": "Jeder Schlag, der sein Ziel verfehlt, erzeugt einen Windstoß, der alle Charaktere im Umkreis von 1,6 m um 0,35 m zurückstößt.",
+      "params": {
+        "gust_radius_m": 1.6,
+        "gust_m": 0.35
+      }
+    },
+    {
+      "id": "brillen-traeger",
+      "name": "Brillen-Träger",
+      "category": "focus",
+      "costs": [
+        {
+          "neutral": 1
+        },
+        {
+          "chaos": 1
+        }
+      ],
+      "effect": "Die Freund-Feind-Erkennung schaltet sich ein und die Trefferchance steigt um 25 Prozentpunkte. Der Charakter fokussiert sich ab sofort auf Gegner.",
+      "params": {
+        "recognize": 1,
+        "hit_bonus": 0.25
+      },
+      "excludes": [
+        "berserker"
+      ]
+    },
+    {
+      "id": "blutdurst",
+      "name": "Blutdurst",
+      "category": "focus",
+      "costs": [
+        {
+          "damage": 1
+        }
+      ],
+      "effect": "Der Charakter greift bevorzugt das Ziel an, das prozentual die wenigsten Lebenspunkte in seinem Sichtfeld hat.",
+      "params": {
+        "bloodlust": true
+      }
+    },
+    {
+      "id": "ochsenlunge",
+      "name": "Ochsenlunge",
+      "category": "neutral",
+      "costs": [
+        {
+          "neutral": 1
+        }
+      ],
+      "stackable": true,
+      "effect": "Erhöht die maximalen Lebenspunkte permanent um 10. Verändert das Verhalten nicht.",
+      "params": {
+        "max_hp_bonus": 10
+      }
+    },
+    {
+      "id": "adrenalin",
+      "name": "Adrenalin-Schub",
+      "category": "neutral",
+      "costs": [
+        {
+          "neutral": 1
+        }
+      ],
+      "stackable": true,
+      "effect": "Erhöht die Angriffsgeschwindigkeit um 15 %: Ausholen und Erholen gehen schneller.",
+      "params": {
+        "attack_speed_mult": 1.15
+      }
     }
   ]
 }

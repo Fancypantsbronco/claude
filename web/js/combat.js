@@ -15,6 +15,8 @@
  * Nach dem Kampf waechst jedes Attribut ein kleines Stueck durch das, was der
  * Kaempfer getan hat (growth(), "Learning by Doing").
  *
+ * Karten (state.cards) aendern das Verhalten ueber params, siehe cardMods().
+ *
  * Reine Logik ohne DOM/three.js: laeuft im Browser und unter Node (tools/balance.js).
  */
 (function (root) {
@@ -46,7 +48,7 @@
     return {
       swings: 0, hits: 0, misses: 0, air: 0, dodged: 0, glances: 0, friendly_hits: 0,
       interrupted: 0, held_back: 0, intercepts: 0, targeted: 0, dodges: 0,
-      damage_dealt: 0, damage_taken: 0, hits_taken: 0, distance: 0, kos: 0, exhausted_s: 0,
+      damage_dealt: 0, damage_taken: 0, hits_taken: 0, distance: 0, kos: 0, exhausted_s: 0, healed: 0, reflected: 0,
     };
   }
 
@@ -63,7 +65,28 @@
     };
   }
 
-  function createFight(state, seed, statsById) {
+  // Summe aller Karten-Effekte eines Kaempfers (stapelbare Karten zaehlen mehrfach)
+  function cardMods(state, cardIds) {
+    const m = {
+      damage_taken_mult: 1, move_mult: 1, reflect: 0, friendly_damage_mult: 1, friendly_heal: 0,
+      aoe_radius_m: 0, gust_radius_m: 0, gust_m: 0, recognize: null, hit_bonus: 0,
+      bloodlust: false, max_hp_bonus: 0, attack_speed_mult: 1,
+    };
+    const byId = Object.fromEntries((state.cards || []).map((c) => [c.id, c]));
+    for (const id of cardIds || []) {
+      const p = (byId[id] || {}).params || {};
+      for (const [k, v] of Object.entries(p)) {
+        if (k.endsWith('_mult')) m[k] *= v;
+        else if (k === 'recognize' || k === 'bloodlust') m[k] = k === 'recognize' && m.recognize === 0 ? 0 : v; // Berserker sticht Brille
+        else if (k === 'aoe_radius_m' || k === 'gust_radius_m' || k === 'gust_m') m[k] = Math.max(m[k], v);
+        else m[k] += v;
+      }
+    }
+    return m;
+  }
+
+  // loadout: { [id]: { stats, cards } } aus der Saison; fehlt etwas, gelten Startwerte
+  function createFight(state, seed, loadout) {
     const R = state.rules;
     const rng = mulberry32(seed);
     const rand = (a, b) => a + (b - a) * rng();
@@ -78,18 +101,24 @@
     Object.keys(byTeam).forEach((team, ti) => {
       const side = ti === 0 ? -1 : 1;
       byTeam[team].forEach((r, i, list) => {
-        const stats = { ...R.start_stats, ...((statsById && statsById[r.id]) || {}) };
+        const lo = (loadout && loadout[r.id]) || {};
+        const stats = { ...R.start_stats, ...(lo.stats || {}) };
+        const cards = (lo.cards || []).slice();
+        const mods = cardMods(state, cards);
         const d = derive(R, stats);
+        d.maxHp = round1(d.maxHp + mods.max_hp_bonus);
+        d.hit = clamp(d.hit + mods.hit_bonus, 0.05, 0.95);
+        if (mods.recognize !== null) d.recognize = mods.recognize;
         const x = side * 2.4 + rand(-0.15, 0.15);
         const z = (i - (list.length - 1) / 2) * 1.6 + rand(-0.1, 0.1);
         fighters.push({
           id: r.id, name: r.name, team,
           x, z, px: x, pz: z,
           heading: side < 0 ? Math.PI / 2 : -Math.PI / 2,
-          stats, d,
+          stats, d, cards, mods,
           hp: d.maxHp, maxHp: d.maxHp,
           stamina: d.staminaMax, exhausted: false,
-          state: 'idle', stateT: 0, windup: R.windup_s, intended: null,
+          state: 'idle', stateT: 0, windup: R.windup_s / mods.attack_speed_mult, intended: null,
           think: rand(0.2, 1.0),
           walkPhase: rand(0, Math.PI * 2),
           lastHitT: -10, downT: -1,
@@ -117,34 +146,42 @@
     const alive = (o) => o.state !== 'down';
     const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 
-    function frontTarget(f) {
+    // Wer steht im Sichtkegel in Reichweite? Blutdurst: niedrigste LP-Quote statt naechster.
+    function frontTarget(f, enemiesOnly) {
       let best = null;
-      let bestD = Infinity;
-      for (const o of fighters) {
-        if (o === f || !alive(o)) continue;
-        const dx = o.x - f.x;
-        const dz = o.z - f.z;
-        const d = Math.hypot(dx, dz);
-        if (d > R.reach_m || d >= bestD) continue;
-        if (Math.abs(wrapAngle(angleTo(dx, dz) - f.heading)) > cone) continue;
-        best = o;
-        bestD = d;
-      }
-      return best;
-    }
-
-    // Naechster sichtbarer Kaempfer in der vorderen Haelfte. Mit Erkennung: nur Feinde.
-    function nearestAhead(f, enemiesOnly) {
-      let best = null;
-      let bestD = f.d.sight;
+      let bestScore = Infinity;
       for (const o of fighters) {
         if (o === f || !alive(o) || (enemiesOnly && o.team === f.team)) continue;
         const dx = o.x - f.x;
         const dz = o.z - f.z;
         const d = Math.hypot(dx, dz);
-        if (d >= bestD || Math.abs(wrapAngle(angleTo(dx, dz) - f.heading)) > Math.PI / 2) continue;
+        if (d > R.reach_m) continue;
+        if (Math.abs(wrapAngle(angleTo(dx, dz) - f.heading)) > cone) continue;
+        const score = f.mods.bloodlust ? o.hp / o.maxHp + d * 0.01 : d;
+        if (score < bestScore) { best = o; bestScore = score; }
+      }
+      return best;
+    }
+
+    // Kurzsichtiger Berserker: alle im Umkreis, egal in welche Richtung
+    function aoeTargets(f) {
+      return fighters.filter((o) => o !== f && alive(o) && dist(f, o) <= f.mods.aoe_radius_m);
+    }
+
+    // Naechster sichtbarer Kaempfer in der vorderen Haelfte. Mit Erkennung: nur Feinde.
+    function nearestAhead(f, enemiesOnly) {
+      let best = null;
+      let bestD = Infinity;
+      for (const o of fighters) {
+        if (o === f || !alive(o) || (enemiesOnly && o.team === f.team)) continue;
+        const dx = o.x - f.x;
+        const dz = o.z - f.z;
+        const d = Math.hypot(dx, dz);
+        if (d >= f.d.sight || Math.abs(wrapAngle(angleTo(dx, dz) - f.heading)) > Math.PI / 2) continue;
+        const score = f.mods.bloodlust ? o.hp / o.maxHp : d;
+        if (score >= bestD) continue;
         best = o;
-        bestD = d;
+        bestD = score;
       }
       return best;
     }
@@ -169,8 +206,10 @@
     }
 
     function decide(f) {
-      const front = frontTarget(f);
-      if (front && front.team === f.team && rng() < f.d.recognize) {
+      const recognizes = rng() < f.d.recognize;
+      const enemyFront = recognizes ? frontTarget(f, true) : null;
+      const front = enemyFront || (f.mods.aoe_radius_m ? aoeTargets(f)[0] : null) || frontTarget(f, false);
+      if (front && front.team === f.team && recognizes && !f.mods.aoe_radius_m) {
         // Bewusstsein: erkennt den Teamkameraden und dreht ab
         f.record.held_back += 1;
         walk(f, f.heading + (rng() < 0.5 ? -1 : 1) * rand(1.2, 2.2));
@@ -178,54 +217,35 @@
       }
       if (front || rng() < R.flail_chance) {
         f.intended = front ? front.id : null;
-        f.windup = R.windup_s * (f.exhausted ? R.exhausted_slow_factor : 1);
+        f.focus = recognizes; // erkannt beim Ausholen -> trifft beim Zuschlagen nur Feinde
+        f.windup = (R.windup_s / f.mods.attack_speed_mult) * (f.exhausted ? R.exhausted_slow_factor : 1);
         setState(f, 'windup');
         f.record.swings += 1;
         spend(f, R.stamina_swing_cost);
         return;
       }
-      const o = nearestAhead(f, rng() < f.d.recognize);
+      const o = nearestAhead(f, recognizes);
       walk(f, o ? angleTo(o.x - f.x, o.z - f.z) + rand(-noise, noise) : f.heading + rand(-1.6, 1.6));
     }
 
-    function knockback(attacker, victim, meters) {
+    function knockback(attacker, victim, meters, spin) {
       const away = angleTo(victim.x - attacker.x, victim.z - attacker.z);
       victim.x += Math.sin(away) * meters;
       victim.z += Math.cos(away) * meters;
-      victim.heading = wrapAngle(victim.heading + rand(-2, 2));
+      if (spin) victim.heading = wrapAngle(victim.heading + rand(-2, 2));
     }
 
-    function strike(f) {
-      const victim = frontTarget(f);
-      const tokens = [];
-      if (!victim) {
-        f.record.air += 1;
-        // erst wiederholtes Leerschlagen zaehlt: jeder n-te Schlag ins Leere gibt Chaos
-        if (f.record.air % R.air_swings_per_chaos === 0) give(f, 'chaos', tokens);
-        return emit({ type: 'air', attacker: f.id, tokens });
-      }
-      victim.record.targeted += 1;
-      const roll = Math.floor(rng() * 100) + 1;
-      const threshold = Math.round(f.d.hit * 100);
-      if (roll > threshold) {
-        f.record.misses += 1;
-        return emit({ type: 'miss', attacker: f.id, victim: victim.id, roll, threshold, tokens });
-      }
-      if (rng() < victim.d.dodge) {
-        f.record.dodged += 1;
-        victim.record.dodges += 1;
-        return emit({ type: 'dodge', attacker: f.id, victim: victim.id, roll, threshold, tokens });
-      }
-      const friendly = victim.team === f.team;
-      if (friendly && rng() < R.friendly_glance_chance) {
-        // Streifschlag ohne Schaden am eigenen Team -> Support
-        f.record.glances += 1;
-        give(f, 'support', tokens);
-        victim.lastHitT = fight.t;
-        return emit({ type: 'glance', attacker: f.id, victim: victim.id, roll, threshold, tokens });
-      }
-      const base = R.damage_min + Math.floor(rng() * (R.damage_max - R.damage_min + 1));
-      const dmg = round1(base * f.stats.strength);
+    // Tornado-Faust: Windstoss bei jedem Fehlschlag
+    function gust(f, tokens) {
+      if (!f.mods.gust_m) return null;
+      const pushed = fighters.filter((o) => o !== f && alive(o) && dist(f, o) <= f.mods.gust_radius_m);
+      for (const o of pushed) knockback(f, o, f.mods.gust_m, false);
+      return pushed.length ? emit({ type: 'gust', attacker: f.id, count: pushed.length, tokens }) : null;
+    }
+
+    function damage(f, victim, friendly, base, tokens, extra) {
+      let dmg = base * f.stats.strength * (friendly ? f.mods.friendly_damage_mult : 1) * victim.mods.damage_taken_mult;
+      dmg = Math.max(0.1, round1(dmg));
       f.record.hits += 1;
       f.record.damage_dealt = round1(f.record.damage_dealt + dmg);
       if (friendly) f.record.friendly_hits += 1;
@@ -235,6 +255,13 @@
       victim.hp = Math.max(0, round1(victim.hp - dmg));
       victim.lastHitT = fight.t;
       if (victim.state === 'windup') victim.record.interrupted += 1;
+      // Verraeter: heilt sich am eigenen Team
+      let healed = 0;
+      if (friendly && f.mods.friendly_heal) {
+        healed = round1(Math.min(f.maxHp - f.hp, dmg * f.mods.friendly_heal));
+        f.hp = round1(f.hp + healed);
+        f.record.healed = round1((f.record.healed || 0) + healed);
+      }
       // Abgefangen: gezielt war ein anderer aus dem Team des Opfers
       const intended = f.intended && byId[f.intended];
       const intercepted = intended && intended !== victim && intended.team === victim.team && victim.hp > 0;
@@ -243,17 +270,74 @@
         give(victim, 'light', tokens);
       }
       if (victim.hp > 0) give(victim, 'tank', tokens);
-      knockback(f, victim, f.d.knockback);
-      const ev = emit({ type: 'hit', attacker: f.id, victim: victim.id, friendly, dmg, roll, threshold, hp: victim.hp, intercepted: !!intercepted, intended: intercepted ? intended.id : null, tokens });
-      if (victim.hp <= 0) {
-        setState(victim, 'down');
-        victim.downT = fight.t;
-        f.record.kos += 1;
-        emit({ type: 'ko', attacker: f.id, victim: victim.id });
-      } else {
-        setState(victim, 'stagger');
+      // Schmerz-Echo: Angreifer bekommt einen Teil zurueck
+      let reflected = 0;
+      if (victim.mods.reflect && victim.hp > 0) {
+        reflected = Math.max(0.1, round1(dmg * victim.mods.reflect));
+        f.hp = Math.max(0, round1(f.hp - reflected));
+        f.record.damage_taken = round1(f.record.damage_taken + reflected);
+        victim.record.reflected = round1((victim.record.reflected || 0) + reflected);
       }
+      knockback(f, victim, f.d.knockback, true);
+      const ev = emit({ type: 'hit', attacker: f.id, victim: victim.id, friendly, dmg, hp: victim.hp, healed, reflected,
+        intercepted: !!intercepted, intended: intercepted ? intended.id : null, tokens, ...extra });
+      if (victim.hp <= 0) knockOut(victim, f);
+      if (f.hp <= 0 && alive(f)) knockOut(f, victim);
+      else if (victim.hp > 0) setState(victim, 'stagger');
       return ev;
+    }
+
+    function knockOut(victim, by) {
+      setState(victim, 'down');
+      victim.downT = fight.t;
+      by.record.kos += 1;
+      emit({ type: 'ko', attacker: by.id, victim: victim.id });
+    }
+
+    function strike(f) {
+      const tokens = [];
+      const victims = f.mods.aoe_radius_m ? aoeTargets(f) : [frontTarget(f, !!f.focus)].filter(Boolean);
+      if (!victims.length) {
+        f.record.air += 1;
+        // erst wiederholtes Leerschlagen zaehlt: jeder n-te Schlag ins Leere gibt Chaos
+        if (f.record.air % R.air_swings_per_chaos === 0) give(f, 'chaos', tokens);
+        const ev = emit({ type: 'air', attacker: f.id, tokens });
+        gust(f, []);
+        return ev;
+      }
+      for (const v of victims) v.record.targeted += 1;
+      const roll = Math.floor(rng() * 100) + 1;
+      const threshold = Math.round(f.d.hit * 100);
+      const aoe = victims.length > 1 || !!f.mods.aoe_radius_m;
+      if (roll > threshold) {
+        f.record.misses += 1;
+        const ev = emit({ type: 'miss', attacker: f.id, victim: victims[0].id, aoe, roll, threshold, tokens });
+        gust(f, []);
+        return ev;
+      }
+      let last = null;
+      for (const victim of victims) {
+        const vt = [];
+        if (rng() < victim.d.dodge) {
+          f.record.dodged += 1;
+          victim.record.dodges += 1;
+          last = emit({ type: 'dodge', attacker: f.id, victim: victim.id, roll, threshold, tokens: vt });
+          continue;
+        }
+        const friendly = victim.team === f.team;
+        if (friendly && !f.mods.friendly_heal && rng() < R.friendly_glance_chance) {
+          // Streifschlag ohne Schaden am eigenen Team -> Support
+          f.record.glances += 1;
+          give(f, 'support', vt);
+          victim.lastHitT = fight.t;
+          last = emit({ type: 'glance', attacker: f.id, victim: victim.id, roll, threshold, tokens: vt });
+          continue;
+        }
+        const base = R.damage_min + Math.floor(rng() * (R.damage_max - R.damage_min + 1));
+        last = damage(f, victim, friendly, base, vt, { roll, threshold, aoe });
+        if (!alive(f)) break;
+      }
+      return last;
     }
 
     function stepFighter(f) {
@@ -274,10 +358,10 @@
           if (f.stateT >= f.windup) { strike(f); if (f.state === 'windup') setState(f, 'recover'); }
           break;
         case 'recover':
-          if (f.stateT >= R.recover_s) { setState(f, 'idle'); f.think = rand(R.think_min_s, R.think_max_s); }
+          if (f.stateT >= R.recover_s / f.mods.attack_speed_mult) { setState(f, 'idle'); f.think = rand(R.think_min_s, R.think_max_s); }
           break;
         case 'walk': {
-          const v = R.move_speed_mps * (f.exhausted ? 1 / R.exhausted_slow_factor : 1) * dt;
+          const v = R.move_speed_mps * f.mods.move_mult * (f.exhausted ? 1 / R.exhausted_slow_factor : 1) * dt;
           f.x += Math.sin(f.heading) * v;
           f.z += Math.cos(f.heading) * v;
           f.walkPhase += v * 5.5;
@@ -399,7 +483,7 @@
         const ko = f.state === 'down';
         return {
           id: f.id, name: f.name, team: f.team, hp: f.hp, maxHp: f.maxHp, ko,
-          stats: { ...f.stats },
+          stats: { ...f.stats }, cards: f.cards.slice(),
           record,
           tokens: { ...f.tokens },
           imprint: topStack(f.tokens),
@@ -443,7 +527,7 @@
     return { delta, after };
   }
 
-  const api = { createFight, topStack, alignmentOf, growth, derive, mulberry32, TOKEN_IDS, PRIMARY, ALIGNMENT, SECONDARY, ATTRS };
+  const api = { createFight, cardMods, topStack, alignmentOf, growth, derive, mulberry32, TOKEN_IDS, PRIMARY, ALIGNMENT, SECONDARY, ATTRS };
   root.ChaosCombat = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

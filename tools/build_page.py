@@ -9,6 +9,7 @@ Schritte:
   2. data/state.json einlesen, Modell-Kennzahlen ergaenzen, in die Seite einbetten
   3. web/workspace.html: Marker /* @inline pfad */ durch Dateiinhalt ersetzen
   4. site/index.html   -> Artifact-Seite (ohne <html>/<head>, die setzt claude.ai)
+     site/project_export.txt -> kompletter Code fuer den Download-Knopf (export_project.py)
      site/preview.html -> dieselbe Seite mit Doctype fuer lokale Vorschau
         (python -m http.server -d site, dann http://localhost:8000/preview.html)
 """
@@ -22,6 +23,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 
 import glb2web  # noqa: E402
+
+sys.path.insert(0, ROOT)
+import export_project  # noqa: E402
 
 TEMPLATE = os.path.join(ROOT, "web", "workspace.html")
 STATE = os.path.join(ROOT, "data", "state.json")
@@ -86,6 +90,8 @@ def build():
     with open(os.path.join(SITE, "preview.html"), "w", encoding="utf-8") as fh:
         fh.write(preview)
 
+    parts = export_project.export(ROOT, os.path.join(SITE, "project_export.txt"))
+    print("site/project_export.txt  %d Dateien" % len(parts))
     print("site/index.html  %d Bytes" % len(page.encode("utf-8")))
     for web_path, info in sorted(asset_stats.items()):
         print("site/%-28s %4d Dreiecke  %6d Bytes" % (web_path, info["triangles"], info["web_bytes"]))

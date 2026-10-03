@@ -44,6 +44,12 @@ a { color: var(--accent); }
 .editor[data-mode="doc"] { grid-template-columns: 236px minmax(0, 1fr);
   grid-template-areas: "menu menu" "left center" "left center" "status status"; }
 .editor[data-mode="doc"] .right, .editor[data-mode="doc"] .console { display: none; }
+/* Inspector nur bei Auswahl; Konsole einklappbar */
+.editor[data-mode="live"][data-insp="off"] { grid-template-columns: 236px minmax(0, 1fr);
+  grid-template-areas: "menu menu" "left center" "left console" "status status"; }
+.editor[data-insp="off"] .right { display: none; }
+.editor[data-console="min"] { grid-template-rows: auto minmax(0, 1fr) auto auto; }
+.editor[data-console="min"] .console .scroll { display: none; }
 .menubar { grid-area: menu; }
 .left { grid-area: left; }
 .center { grid-area: center; }
@@ -142,16 +148,6 @@ a { color: var(--accent); }
 .hud-team .team-dot { width: 9px; height: 9px; }
 .hud-hint { position: absolute; right: 12px; bottom: 10px; font: 11px var(--font-mono); color: var(--muted); pointer-events: none; }
 
-/* Auswertung ueber dem Viewport */
-.results { position: absolute; inset: 14px; background: color-mix(in srgb, var(--panel) 96%, transparent); border: 1px solid var(--line-2); border-radius: 4px;
-  display: flex; flex-direction: column; box-shadow: 0 10px 40px #0008; }
-.results-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
-.results-head h2 { font-family: var(--font-display); font-weight: 800; font-size: 26px; text-transform: uppercase; letter-spacing: 0.02em; color: var(--fg); }
-.results-head .meta { font: 12px var(--font-mono); color: var(--muted); }
-.results-head .actions { margin-left: auto; display: flex; gap: 6px; }
-.team-sum { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 8px 14px; border-bottom: 1px solid var(--line); font: 12px var(--font-mono); }
-.team-sum > span { display: inline-flex; align-items: center; gap: 6px; }
-
 /* Tabellen */
 .table-wrap { overflow: auto; min-height: 0; }
 table.data { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
@@ -199,7 +195,6 @@ table.data { width: 100%; border-collapse: collapse; font-size: 12.5px; font-var
 .data .delta.up { color: var(--ok); }
 .data-text td { white-space: normal; text-align: left; vertical-align: top; min-width: 160px; }
 .data-text tbody tr { cursor: default; }
-.results-note { padding: 6px 14px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--line); }
 .token-group { display: grid; gap: 6px; }
 .token-group h3 { font-size: 15px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
 .token-group h3 span { font-size: 12.5px; font-weight: 400; color: var(--muted); }
@@ -277,6 +272,63 @@ table.data { width: 100%; border-collapse: collapse; font-size: 12.5px; font-var
 .clip[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); }
 select { background: var(--field); color: var(--fg); border: 1px solid var(--line-2); border-radius: 3px; padding: 4px 6px; font: inherit; }
 
+/* ---------- Fenster "Nach dem Kampf" */
+.afterfight { position: fixed; inset: 0; z-index: 50; background: #07080acc; display: flex; align-items: stretch; justify-content: center;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 18px calc(18px + env(safe-area-inset-bottom, 0px)); }
+.af-window { width: min(1400px, 100%); max-height: 100%; background: var(--panel); border: 1px solid var(--line-2); border-radius: 6px;
+  display: flex; flex-direction: column; box-shadow: 0 20px 80px #000a; min-width: 0; }
+.af-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; padding: 14px 18px; border-bottom: 1px solid var(--line); background: var(--panel-2); border-radius: 6px 6px 0 0; }
+.af-titles { display: grid; }
+.af-titles h2 { font-family: var(--font-display); font-weight: 800; font-size: 30px; line-height: 1; text-transform: uppercase; letter-spacing: 0.02em; }
+.af-meta { font: 12px var(--font-mono); color: var(--muted); }
+.af-steps { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.af-step { display: grid; text-align: left; gap: 1px; background: var(--panel); border: 1px solid var(--line-2); border-radius: 4px; padding: 6px 12px; cursor: pointer; min-width: 150px; }
+.af-step span { font-size: 11.5px; color: var(--muted); }
+.af-step[aria-current="step"] { border-color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+.af-body { flex: 1; min-height: 0; overflow: auto; padding: 16px 18px 24px; display: grid; gap: 14px; align-content: start; }
+.af-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 18px; border-top: 1px solid var(--line); background: var(--panel-2); border-radius: 0 0 6px 6px; }
+.af-hint { flex: 1; color: #d0aa5a; font-size: 12.5px; text-align: right; }
+.af-foot .btn-primary { font-size: 14px; padding: 7px 16px; }
+.af-note { color: var(--muted); max-width: 90ch; }
+.team-sum { display: flex; flex-wrap: wrap; gap: 6px 18px; font: 12.5px var(--font-mono); }
+.team-sum > span { display: inline-flex; align-items: center; gap: 6px; }
+.btn-after { border-color: #d0aa5a; color: #d0aa5a; }
+.btn-export { padding: 2px 10px; font-size: 11.5px; }
+.chips { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.card-chip { display: inline-block; padding: 1px 7px; border-radius: 2px; font-size: 11.5px; background: var(--panel-2); box-shadow: inset 3px 0 0 var(--cat); border: 1px solid var(--line-2); }
+.label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.wallet { display: grid; gap: 4px; }
+
+.imprint-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.imprint-card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 12px; display: grid; gap: 10px; align-content: start; }
+.imprint-card header { display: flex; align-items: center; gap: 10px; }
+.imprint-card header .portrait { width: 40px; height: 40px; }
+.imprint-card h3 { font-size: 15px; }
+.gain { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+
+.evo-row { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; padding: 14px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; }
+.evo-row.is-decided { opacity: 0.85; }
+.evo-who { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-content: start; }
+.evo-who > div { display: grid; gap: 8px; align-content: start; }
+.evo-who h3 { font-family: var(--font-display); font-weight: 800; font-size: 26px; line-height: 0.95; text-transform: uppercase; }
+.portrait-lg { width: 64px; height: 64px; border-radius: 4px; }
+.evo-result { color: var(--ok); font-weight: 600; }
+.evo-offers { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; align-items: stretch; }
+.evo-pool { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.evo-card { position: relative; display: grid; gap: 6px; align-content: start; background: var(--panel); border: 1px solid var(--line-2); border-radius: 6px;
+  padding: 12px 12px 12px 16px; box-shadow: inset 4px 0 0 var(--cat); }
+.evo-card h4 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 22px; line-height: 1; text-transform: uppercase; letter-spacing: 0.02em; }
+.evo-cat { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cat); }
+.evo-cost { font-size: 12.5px; color: var(--muted); }
+.evo-cost b { color: var(--fg); font-weight: 600; }
+.evo-effect { font-size: 13px; }
+.evo-card .btn { justify-self: start; margin-top: 4px; }
+.evo-card.is-chosen { border-color: var(--ok); box-shadow: inset 4px 0 0 var(--cat), 0 0 0 1px var(--ok); }
+.evo-card.is-faded { opacity: 0.4; }
+.evo-skip { align-self: start; justify-self: start; }
+.evo-none { padding: 10px 0; }
+.evo-owners { font-size: 11.5px; color: var(--muted); }
+
 /* ---------- Schmal: Panels untereinander */
 @media (max-width: 1100px) {
   .editor, .editor[data-mode="doc"] { height: auto; min-height: 100%;
@@ -291,12 +343,15 @@ select { background: var(--field); color: var(--fg); border: 1px solid var(--lin
   .tree a { padding: 3px 8px; white-space: nowrap; }
   .tree .badge { display: none; }
   .view-live { flex-direction: column; }
-  .results { position: static; inset: auto; box-shadow: none; border-width: 1px 0 0; border-radius: 0; }
+
   .stage { min-height: 0; aspect-ratio: 4 / 3; }
   .console .scroll { max-height: 260px; }
   .transport { margin-left: 0; }
   .anim-layout { grid-template-columns: minmax(0, 1fr); }
-  .results { inset: 6px; }
+  .editor[data-mode="live"][data-insp="off"] { grid-template-columns: minmax(0, 1fr); grid-template-areas: "menu" "left" "center" "console" "status"; }
+  .evo-row { grid-template-columns: minmax(0, 1fr); }
+  .afterfight { padding: 0; }
+  .af-window { border-radius: 0; }
 }
 @media (max-width: 560px) {
   .menubar, .statusbar { padding-inline: 16px; }
@@ -311,11 +366,12 @@ select { background: var(--field); color: var(--fg); border: 1px solid var(--lin
 }
 </style>
 
-<div class="editor" id="editor">
+<div class="editor" id="editor" data-insp="off" data-console="full">
   <header class="menubar">
     <span class="logo" id="brand-name">Chaos Arena<small id="brand-version"></small></span>
     <span class="crumb" id="crumb"></span>
     <div class="transport" id="transport">
+      <button class="btn btn-after" id="btn-after" type="button" hidden>Auswertung &amp; Evolution öffnen</button>
       <button class="btn btn-primary" id="btn-play" type="button">▶ Kampf starten</button>
       <button class="btn" id="btn-restart" type="button" title="Gleicher Seed, Kampf von vorn">⟲ Neu laden</button>
       <div class="seg" role="group" aria-label="Tempo" id="speed"></div>
@@ -344,25 +400,45 @@ select { background: var(--field); color: var(--fg); border: 1px solid var(--lin
   </main>
 
   <aside class="panel right">
-    <div class="panel-title">Inspector</div>
+    <div class="panel-title">Inspector <button class="mini-btn" id="insp-close" type="button" aria-label="Inspector schließen">✕</button></div>
     <div class="scroll"><div class="insp" id="inspector"></div></div>
   </aside>
 
   <section class="panel console" aria-label="Konsole">
-    <div class="panel-title">Konsole <span class="console-tools" id="log-filters"></span></div>
+    <div class="panel-title">Konsole <span class="console-tools" id="log-filters"></span>
+      <button class="mini-btn" id="console-toggle" type="button" aria-expanded="true">Einklappen</button></div>
     <div class="scroll" id="console-scroll"><p class="log-empty" id="console-empty">Noch kein Kampf. ▶ Kampf starten.</p><ol class="log" id="console-log"></ol></div>
   </section>
 
+  <div class="afterfight" id="afterfight" hidden role="dialog" aria-modal="true" aria-labelledby="af-title">
+    <div class="af-window">
+      <header class="af-head">
+        <div class="af-titles"><h2 id="af-title">Nach dem Kampf</h2><span class="af-meta" id="af-meta"></span></div>
+        <nav class="af-steps" id="af-steps" aria-label="Schritte"></nav>
+        <button class="btn" id="af-close" type="button">Arena ansehen</button>
+      </header>
+      <div class="af-body" id="af-body"></div>
+      <footer class="af-foot">
+        <button class="btn" id="af-prev" type="button">Zurück</button>
+        <span class="af-hint" id="af-hint"></span>
+        <button class="btn btn-primary" id="af-next" type="button">Weiter</button>
+      </footer>
+    </div>
+  </div>
+
   <footer class="statusbar">
     <span id="status-left"></span>
-    <span class="bridge">Architekten-Brücke: <code id="export-cmd"></code> → <code id="export-file"></code>
-      <button class="mini-btn" id="export-copy" type="button">Kopieren</button></span>
+    <span class="bridge"><span id="export-msg">Architekten-Brücke: der komplette Code als eine .txt-Datei</span>
+      <button class="btn btn-export" id="export-btn" type="button">Projekt-Export herunterladen (.txt)</button></span>
   </footer>
 </div>
 
 <script type="application/json" id="state-data">/* @state */</script>
 <script>
 /* @inline web/js/combat.js */
+</script>
+<script>
+/* @inline web/js/evolution.js */
 </script>
 <script>
 /* @inline web/js/workspace.js */

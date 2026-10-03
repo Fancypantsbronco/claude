@@ -14,13 +14,19 @@
   const groups = state.token_groups.map((g) => ({ ...g, tokens: state.tokens.filter((t) => t.group === g.id) }));
   const attrById = Object.fromEntries(state.attributes.map((a) => [a.id, a]));
   const ALIGN = { dark: tokenById.dark, light: tokenById.light, neutral: tokenById.neutral };
+  const EVO = window.ChaosEvolution;
+  const cardById = Object.fromEntries(state.cards.map((c) => [c.id, c]));
+  const catById = Object.fromEntries(state.card_categories.map((c) => [c.id, c]));
+  const WALLET_IDS = EVO.walletIds(state);
   const rosterById = Object.fromEntries(state.roster.map((r) => [r.id, r]));
   const teamOf = (id) => state.teams[rosterById[id].team];
 
   const CW = {
     state, fight: null, alpha: 0, speed: 1, running: false, selected: null,
     portraits: {}, fightNo: 0, lastSummary: null, ledger: {}, fightsDone: 0, view: 'live',
-    season: { stats: {} }, // Attribute pro Kaempfer, wachsen nach jedem Kampf (nur in dieser Sitzung)
+    season: EVO.newSeason(state), // Attribute, Karten, Praegungen pro Kaempfer (nur in dieser Sitzung)
+    after: null,                  // Daten des Fensters "Nach dem Kampf"
+
   };
   window.ChaosWorkspace = CW;
 
@@ -58,6 +64,20 @@
   const pct = (v) => Math.round(v * 100) + ' %';
   const seasonStats = (id) => ({ ...state.rules.start_stats, ...(CW.season.stats[id] || {}) });
   const chip = (t, text) => h('span', { class: 'top-chip', style: '--tok:' + t.color }, text || t.label);
+  const costText = (cost) => Object.entries(cost).map(([t, n]) => n + ' ' + tokenById[t].label).join(' + ');
+  function walletChips(wallet, empty) {
+    const list = WALLET_IDS.filter((t) => wallet[t] > 0);
+    if (!list.length) return h('span', { class: 'insp-empty' }, empty || 'keine Prägungen');
+    return h('span', { class: 'chips' }, list.map((t) => chip(tokenById[t], tokenById[t].label + ' × ' + wallet[t])));
+  }
+  function cardList(ids) {
+    if (!ids.length) return h('span', { class: 'insp-empty' }, 'noch keine Karten');
+    const count = {};
+    for (const id of ids) count[id] = (count[id] || 0) + 1;
+    return h('span', { class: 'chips' }, Object.entries(count).map(([id, n]) =>
+      h('span', { class: 'card-chip', style: '--cat:' + catById[cardById[id].category].color, title: cardById[id].effect },
+        cardById[id].name + (n > 1 ? ' × ' + n : ''))));
+  }
 
   const STATE_LABEL = { idle: 'steht', walk: 'läuft', windup: 'holt aus', recover: 'schlägt', stagger: 'taumelt', down: 'K.O.' };
   const LOOK_LABEL = {
@@ -95,7 +115,13 @@
   let last = performance.now();
 
   function newFight(seed) {
-    CW.fight = createFight(state, seed, CW.season.stats);
+    if (CW.after) {
+      // offene Evolutionen verfallen, Praegungen bleiben
+      for (const ev of CW.after.phase.evolvers) EVO.skip(ev);
+      CW.after = null;
+      if (docs.evolutionen) rerenderDocs(['evolutionen']);
+    }
+    CW.fight = createFight(state, seed, EVO.loadout(CW.season));
     CW.fightNo += 1;
     CW.running = false;
     CW.lastSummary = null;
@@ -105,7 +131,7 @@
     consoleLog.replaceChildren();
     $('console-empty').hidden = false;
     $('console-empty').textContent = 'Kampf #' + CW.fightNo + ' bereit · Seed ' + seed + '. ▶ Kampf starten.';
-    results.hidden = true;
+    closeAfter();
     emit('chaos:fight-new', { seed });
     refreshLive(true);
   }
@@ -116,7 +142,7 @@
     CW.running = !CW.running;
     if (CW.running && CW.fight.t === 0) {
       appendLog([{ type: 'start', t: 0, tokens: [] }]);
-      results.hidden = true;
+      closeAfter();
     }
     refreshTransport();
   }
@@ -133,9 +159,12 @@
       for (const t of TOKEN_IDS) l.tokens[t] += row.tokens[t];
       CW.season.stats[row.id] = row.growth.after; // Learning by Doing: gilt ab dem naechsten Kampf
     }
-    renderResults();
-    results.hidden = false;
-    rerenderDocs(['kampf-log', 'token-abrechnung', 'roster']);
+    CW.season.fights += 1;
+    // Evolutions-Phase: Token -> Praegungen, 2 Kaempfer pro Team, je 3 Karten
+    const phase = EVO.runPhase(state, summary, CW.season, CW.fight.seed);
+    CW.after = { no: CW.fightNo, seed: CW.fight.seed, rows: summary, phase };
+    openAfter(0);
+    rerenderDocs(['kampf-log', 'token-abrechnung', 'roster', 'evolutionen']);
     refreshLive(true);
   }
 
@@ -281,6 +310,7 @@
 
   function select(id) {
     CW.selected = CW.selected === id ? null : id;
+    $('editor').dataset.insp = CW.selected ? 'on' : 'off';
     for (const [rid, r] of Object.entries(sceneRows)) r.row.setAttribute('aria-selected', String(rid === CW.selected));
     renderInspector();
     emit('chaos:select', { id: CW.selected });
@@ -358,6 +388,11 @@
           stackRefs[t.id] = { row, bar, val };
           return row;
         })))),
+      h('div', { class: 'insp-block' },
+        h('h3', null, 'Prägungen (Währung für Karten)'),
+        walletChips(CW.season.wallets[r.id]),
+        h('h3', null, 'Karten'),
+        cardList(CW.season.cards[r.id])),
       h('div', { class: 'insp-block' },
         h('h3', null, 'Statistik'),
         h('dl', { class: 'kv' }, [
@@ -512,7 +547,6 @@
     h('div', { class: 'labels', id: 'labels' }),
     h('div', { class: 'hud', id: 'hud' }),
     h('p', { class: 'hud-hint' }, 'Klick auf Kämpfer = Inspector'));
-  const results = h('section', { class: 'results', hidden: true, 'aria-label': 'Auswertung' });
   CW.stageEl = stage; // arena3d.js haengt sich hier ein, auch wenn die Live-Ansicht noch nicht sichtbar ist
 
   const hudRows = {};
@@ -581,23 +615,150 @@
       }))));
   }
 
-  function renderResults() {
-    const s = CW.lastSummary;
-    const totals = teamTokenTotals();
-    const kos = s.rows.filter((r) => r.ko).length;
-    results.replaceChildren(
-      h('div', { class: 'results-head' },
-        h('h2', null, 'Auswertung'),
-        h('span', { class: 'meta' }, 'Kampf #' + s.no + ' · Seed ' + s.seed + ' · ' + state.rules.duration_s + ' s · ' + (kos ? kos + ' K.O.' : 'kein K.O.')),
-        h('div', { class: 'actions' },
-          h('button', { class: 'btn', type: 'button', onclick: () => { results.hidden = true; } }, 'Arena ansehen'),
-          h('button', { class: 'btn btn-primary', type: 'button', onclick: () => { newFight(randomSeed()); play(); } }, '▶ Neuer Kampf'))),
+  // ---------------------------------------------------------------- Fenster "Nach dem Kampf"
+
+  const AF_STEPS = [
+    ['Auswertung', 'Was im Kampf passiert ist'],
+    ['Prägungen', 'Token werden zu Währung'],
+    ['Evolution', '2 Kämpfer pro Team wählen eine Karte'],
+  ];
+  let afStep = 0;
+
+  function openAfter(step) {
+    if (!CW.after) return;
+    afStep = step;
+    $('afterfight').hidden = false;
+    $('btn-after').hidden = true;
+    renderAfter();
+    $('af-next').focus();
+  }
+
+  function closeAfter() {
+    $('afterfight').hidden = true;
+    $('btn-after').hidden = !CW.after || CW.fight.t === 0 || !CW.fight.done;
+  }
+
+  function openDecisions() {
+    return CW.after ? CW.after.phase.evolvers.filter((e) => !e.chosen && e.offers.length).length : 0;
+  }
+
+  function renderAfter() {
+    const a = CW.after;
+    const kos = a.rows.filter((r) => r.ko).length;
+    $('af-meta').textContent = 'Kampf #' + a.no + ' · Seed ' + a.seed + ' · ' + state.rules.duration_s + ' s · ' + (kos ? kos + ' K.O.' : 'kein K.O.') + ' · Saison-Kampf ' + CW.season.fights;
+    $('af-steps').replaceChildren(...AF_STEPS.map(([label, sub], i) => h('button', {
+      type: 'button', class: 'af-step', 'aria-current': i === afStep ? 'step' : null, onclick: () => { afStep = i; renderAfter(); },
+    }, h('b', null, (i + 1) + ' · ' + label), h('span', null, sub))));
+    const body = $('af-body');
+    body.replaceChildren(...[afStats, afImprints, afEvolution][afStep]());
+    body.scrollTop = 0;
+    $('af-prev').disabled = afStep === 0;
+    const open = openDecisions();
+    $('af-next').textContent = afStep < 2 ? 'Weiter: ' + AF_STEPS[afStep + 1][0] : '▶ Nächster Kampf';
+    $('af-hint').textContent = afStep === 2 && open ? open + ' Evolution' + (open > 1 ? 'en' : '') + ' offen. Offene Evolutionen verfallen, die Prägungen bleiben.' : '';
+  }
+
+  function afStats() {
+    const a = CW.after;
+    const totals = {};
+    for (const team of Object.keys(state.teams)) totals[team] = Object.fromEntries(TOKEN_IDS.map((t) => [t, 0]));
+    for (const r of a.rows) for (const t of TOKEN_IDS) totals[r.team][t] += r.tokens[t];
+    return [
       h('div', { class: 'team-sum' }, Object.values(state.teams).map((team) =>
         h('span', null, h('i', { class: 'team-dot', style: '--team:' + team.color }), h('b', null, team.name),
           activeTokens.map((t) => h('span', { style: 'color:' + t.color }, ' ' + t.short + ' ' + totals[team.id][t.id]))))),
-      h('p', { class: 'results-note' }, 'Die Attribute sind schon um den Zuwachs aus diesem Kampf erhöht (kleine Zahl) und gelten ab dem nächsten Kampf.'),
-      resultTable(s.rows, { onPick: select }));
+      h('p', { class: 'af-note' }, 'Die Attribute enthalten schon den Zuwachs aus diesem Kampf (kleine Zahl) und gelten ab dem nächsten Kampf. Klick auf eine Zeile zeigt den Kämpfer im Inspector.'),
+      h('div', { class: 'card' }, resultTable(a.rows, { onPick: (id) => { closeAfter(); if (CW.selected !== id) select(id); } })),
+    ];
   }
+
+  function afImprints() {
+    const a = CW.after;
+    const E = state.evolution;
+    return [
+      h('p', { class: 'af-note' }, 'Der größte Stapel aus ' + E.imprint_tokens.map((t) => tokenById[t].label).join(', ') +
+        ' wird zu 1 permanenten Prägung. Jeder Teilnehmer bekommt zusätzlich ' + E.neutral_per_fight + ' Neutral-Prägung. Prägungen bezahlen Karten.'),
+      h('div', { class: 'imprint-grid' }, a.rows.map((row) => {
+        const st = a.phase.settlement[row.id];
+        const max = Math.max(1, ...Object.values(st.counts));
+        return h('article', { class: 'imprint-card' },
+          h('header', null, portrait(row.id), h('div', null, h('h3', null, row.name), h('span', { class: 'insp-sub' }, h('i', { class: 'team-dot', style: '--team:' + teamOf(row.id).color }), teamOf(row.id).name))),
+          h('div', { class: 'stacks' }, E.imprint_tokens.map((t) => {
+            const tk = tokenById[t];
+            return h('div', { class: 'stack' + (t === st.imprint ? ' is-top' : ''), style: '--tok:' + tk.color },
+              h('span', null, tk.label), h('span', { class: 'stack-bar' }, h('i', { style: 'width:' + (100 * st.counts[t]) / max + '%' })), h('b', null, st.counts[t]));
+          })),
+          h('p', { class: 'gain' }, Object.entries(st.gained).map(([t, n]) => chip(tokenById[t], '+' + n + ' ' + tokenById[t].label)),
+            st.tied ? h('span', { class: 'insp-empty' }, ' Gleichstand, ausgelost') : null,
+            !st.imprint ? h('span', { class: 'insp-empty' }, ' keine Token für eine Prägung') : null),
+          h('div', { class: 'wallet' }, h('span', { class: 'label' }, 'Besitz jetzt'), walletChips(CW.season.wallets[row.id])));
+      })),
+    ];
+  }
+
+  function cardTile(c, opts) {
+    const cat = catById[c.category];
+    return h('div', { class: 'evo-card' + (opts.state ? ' is-' + opts.state : ''), style: '--cat:' + cat.color },
+      h('span', { class: 'evo-cat' }, cat.label),
+      h('h4', null, c.name),
+      h('p', { class: 'evo-cost' }, 'Kosten: ', c.costs.map((cost, i) => [i ? ' oder ' : '', h('b', null, costText(cost))])),
+      h('p', { class: 'evo-effect' }, c.effect),
+      opts.button || null);
+  }
+
+  function afEvolution() {
+    const a = CW.after;
+    const chosenIds = new Set(a.phase.evolvers.map((e) => e.id));
+    const rest = state.roster.filter((r) => !chosenIds.has(r.id));
+    return [
+      h('p', { class: 'af-note' }, 'Ausgelost: ' + state.evolution.evolvers_per_team + ' Kämpfer pro Team. Jeder zieht bis zu ' + state.evolution.cards_drawn +
+        ' Karten, die er mit seinen Prägungen bezahlen kann. Die gewählte Karte kostet Prägungen und wirkt ab dem nächsten Kampf.'),
+      ...a.phase.evolvers.map((ev) => {
+        const r = rosterById[ev.id];
+        const decided = !!ev.chosen;
+        return h('section', { class: 'evo-row' + (decided ? ' is-decided' : '') },
+          h('div', { class: 'evo-who' },
+            portrait(ev.id, 'portrait-lg'),
+            h('div', null,
+              h('h3', null, r.name),
+              h('span', { class: 'insp-sub' }, h('i', { class: 'team-dot', style: '--team:' + teamOf(ev.id).color }), teamOf(ev.id).name),
+              h('div', { class: 'wallet' }, h('span', { class: 'label' }, 'Prägungen'), walletChips(CW.season.wallets[ev.id])),
+              h('div', { class: 'wallet' }, h('span', { class: 'label' }, 'Karten'), cardList(CW.season.cards[ev.id])),
+              decided ? h('p', { class: 'evo-result' }, ev.chosen === 'skip' ? 'Keine Karte genommen.' : 'Gewählt: ' + cardById[ev.chosen].name + ' · bezahlt mit ' + costText(ev.paid)) : null)),
+          h('div', { class: 'evo-offers' },
+            ev.offers.length ? ev.offers.map((cid) => {
+              const c = cardById[cid];
+              const pay = !decided ? EVO.payable(c, CW.season.wallets[ev.id]) : null;
+              return cardTile(c, {
+                state: decided ? (ev.chosen === cid ? 'chosen' : 'faded') : null,
+                button: decided ? null : h('button', { class: 'btn btn-primary', type: 'button', onclick: () => {
+                  EVO.choose(state, CW.season, ev, cid, a.no);
+                  afterChange();
+                } }, 'Wählen · ' + costText(pay)),
+              });
+            }) : h('p', { class: 'insp-empty evo-none' }, 'Keine Karte bezahlbar. Die Prägungen bleiben für das nächste Mal.'),
+            !decided && ev.offers.length ? h('button', { class: 'btn evo-skip', type: 'button', onclick: () => { EVO.skip(ev); afterChange(); } }, 'Keine Karte nehmen') : null));
+      }),
+      h('p', { class: 'af-note' }, 'Diesmal ohne Evolution: ', rest.map((r) => r.name).join(', ') + '. Ihre Prägungen bleiben erhalten.'),
+    ];
+  }
+
+  function afterChange() {
+    renderAfter();
+    rerenderDocs(['token-abrechnung', 'roster', 'evolutionen']);
+    if (CW.selected) renderInspector();
+  }
+
+  $('af-prev').addEventListener('click', () => { if (afStep > 0) { afStep -= 1; renderAfter(); } });
+  $('af-next').addEventListener('click', () => {
+    if (afStep < 2) { afStep += 1; renderAfter(); return; }
+    for (const ev of CW.after.phase.evolvers) EVO.skip(ev);
+    rerenderDocs(['evolutionen']);
+    newFight(randomSeed());
+  });
+  $('af-close').addEventListener('click', closeAfter);
+  $('btn-after').addEventListener('click', () => openAfter(afStep));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('afterfight').hidden) closeAfter(); });
 
   // ---------------------------------------------------------------- Dokumente
 
@@ -610,7 +771,7 @@
 
   const views = {};
 
-  views.live = () => h('section', { class: 'view-live', id: 'view-live' }, stage, results);
+  views.live = () => h('section', { class: 'view-live', id: 'view-live' }, stage);
 
   views.placeholder = (id) => {
     const sec = state.sections[id] || {};
@@ -646,6 +807,30 @@
       h('div', { class: 'card' }, list));
   };
 
+  views.evolution = (id) => {
+    const owners = {};
+    for (const [fid, ids] of Object.entries(CW.season.cards)) for (const cid of ids) (owners[cid] = owners[cid] || new Set()).add(fid);
+    return h('section', { class: 'doc' }, docHead(id),
+      h('h2', null, 'Ablauf nach jedem Kampf'),
+      h('ol', { class: 'notes' }, state.evolution.notes.map((n) => h('li', null, n))),
+      h('h2', null, 'Kartenpool · ' + state.cards.length + ' Karten'),
+      state.card_categories.map((cat) => h('div', { class: 'token-group' },
+        h('h3', null, cat.label, h('span', null, cat.text)),
+        h('div', { class: 'evo-pool' }, state.cards.filter((c) => c.category === cat.id).map((c) => cardTile(c, {
+          button: h('p', { class: 'evo-owners' }, owners[c.id] ? 'Im Besitz von: ' + [...owners[c.id]].map((o) => rosterById[o].name).join(', ') : (c.stackable ? 'stapelbar · ' : '') + 'noch bei niemandem'),
+        }))))),
+      h('h2', null, 'Evolutionen dieser Saison'),
+      CW.season.history.length
+        ? h('div', { class: 'card' }, h('div', { class: 'table-wrap' }, h('table', { class: 'data' },
+          h('thead', null, h('tr', null, h('th', null, 'Kämpfer'), h('th', null, 'Kampf'), h('th', null, 'Karte'), h('th', null, 'Bezahlt'))),
+          h('tbody', null, CW.season.history.slice().reverse().map((e) => h('tr', null,
+            h('td', null, h('span', { class: 'who' }, portrait(e.id), rosterById[e.id].name)),
+            h('td', null, '#' + e.fight),
+            h('td', null, cardById[e.card].name),
+            h('td', null, costText(e.paid))))))))
+        : h('p', { class: 'insp-empty' }, 'Noch keine Evolution. Nach dem ersten Kampf wählen 2 Kämpfer pro Team eine Karte.'));
+  };
+
   views.ledger = (id) => {
     const rows = state.roster.map((r) => ({
       id: r.id, stats: seasonStats(r.id),
@@ -676,7 +861,9 @@
               h('dt', null, 'Aussehen'), h('dd', null, [LOOK_LABEL.hair[r.look.hair], 'Bart: ' + LOOK_LABEL.beard[r.look.beard], 'Nase: ' + LOOK_LABEL.nose[r.look.nose]].join(' · ') + (r.look.scar ? ' · Narbe' : '')),
               h('dt', null, 'Kämpfe'), h('dd', null, l ? l.fights : 0),
               h('dt', null, 'Prägung'), h('dd', null, top ? chip(tokenById[top]) : '–'),
-              h('dt', null, 'Gesinnung'), h('dd', null, align ? chip(ALIGN[align]) : '–'))));
+              h('dt', null, 'Gesinnung'), h('dd', null, align ? chip(ALIGN[align]) : '–'),
+              h('dt', null, 'Prägungen'), h('dd', null, walletChips(CW.season.wallets[r.id], '–')),
+              h('dt', null, 'Karten'), h('dd', null, cardList(CW.season.cards[r.id])))));
       }))]));
 
   views.models = (id) => {
@@ -768,20 +955,34 @@
   // ---------------------------------------------------------------- Start
 
   $('brand-version').textContent = 'v' + state.meta.version + ' · Schritt ' + state.meta.step;
-  $('export-cmd').textContent = state.meta.export_command;
-  $('export-file').textContent = state.meta.export_file;
-  $('export-copy').addEventListener('click', (e) => {
-    const btn = e.currentTarget;
-    const done = (text) => { btn.textContent = text; setTimeout(() => { btn.textContent = 'Kopieren'; }, 1600); };
-    navigator.clipboard.writeText(state.meta.export_command).then(() => done('Kopiert'), () => {
-      const range = document.createRange();
-      range.selectNodeContents($('export-cmd'));
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      done('Markiert');
-    });
+  // Architekten-Bruecke: kompletter Code als .txt herunterladen (build_page.py legt project_export.txt daneben)
+  $('export-btn').addEventListener('click', async () => {
+    const msg = $('export-msg');
+    msg.textContent = 'Export wird vorbereitet …';
+    try {
+      const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
+      const res = await fetch('project_export.txt');
+      if (!res.ok) throw new Error('project_export.txt fehlt (HTTP ' + res.status + ')');
+      const text = await res.text();
+      if (!dl) {
+        msg.textContent = 'Download ist in dieser Ansicht nicht verfügbar. Lokal: ' + state.meta.export_command;
+        return;
+      }
+      await dl.save({ filename: 'chaos-arena_project_export_v' + state.meta.version + '.txt', data: text });
+      msg.textContent = 'Gespeichert, liegt in deinen Downloads.';
+    } catch (err) {
+      msg.textContent = err && err.code === 'declined' ? 'Download abgebrochen.' : 'Export fehlgeschlagen: ' + ((err && (err.message || err.code)) || err);
+    }
   });
+
+  $('console-toggle').addEventListener('click', (e) => {
+    const ed = $('editor');
+    const min = ed.dataset.console !== 'min';
+    ed.dataset.console = min ? 'min' : 'full';
+    e.currentTarget.textContent = min ? 'Ausklappen' : 'Einklappen';
+    e.currentTarget.setAttribute('aria-expanded', String(!min));
+  });
+  $('insp-close').addEventListener('click', () => { if (CW.selected) select(CW.selected); });
 
   newFight(randomSeed());
   showView();

@@ -1,11 +1,21 @@
 """export_project.py - Architekten-Bruecke fuer Chaos Arena.
 
 Sammelt alle .py-, .json-, .js- und .html-Dateien des Projekts in einer einzigen
-Textdatei project_export.txt, jede Datei mit deutlichem Header. Diese Datei kann
-direkt an den System-Architekten (eine andere KI) weitergegeben werden.
+Textdatei, jede Datei zwischen deutlichen Trennzeilen:
 
-    python export_project.py                      # -> project_export.txt
-    python export_project.py -o stand.txt         # anderer Dateiname
+    === DATEINAME: web/js/combat.js ===
+    ... Inhalt ...
+    === ENDE: web/js/combat.js ===
+
+Diese Datei kann direkt an den System-Architekten (eine andere KI) weitergegeben werden.
+
+Zwei Wege:
+  1. Website: Knopf "Projekt-Export herunterladen" in der Statusleiste (die Datei
+     wird von tools/build_page.py mit dieser Funktion erzeugt).
+  2. Lokal im Projektordner ausfuehren:
+
+    python export_project.py                      # -> ~/Downloads/project_export.txt
+    python export_project.py -o stand.txt         # eigener Pfad
     python export_project.py --include-generated  # auch Build-Ausgaben (site/, *.gltf.json)
 
 Standardmaessig ausgelassen: .git, __pycache__, venv-Ordner, node_modules sowie
@@ -92,11 +102,16 @@ def export(root, out_path, include_generated=False):
 
 def main():
     parser = argparse.ArgumentParser(description="Exportiert den Code-Stand von Chaos Arena in eine Textdatei.")
-    parser.add_argument("-o", "--output", default="project_export.txt", help="Zieldatei (Standard: project_export.txt)")
+    parser.add_argument("-o", "--output", default=None,
+                        help="Zieldatei (Standard: ~/Downloads/project_export.txt, sonst im Projektordner)")
     parser.add_argument("--include-generated", action="store_true", help="auch site/ und *.gltf.json exportieren")
     args = parser.parse_args()
 
-    out_path = args.output if os.path.isabs(args.output) else os.path.join(ROOT, args.output)
+    if args.output:
+        out_path = os.path.abspath(args.output)
+    else:
+        downloads = os.path.join(os.path.expanduser("~"), "Downloads")
+        out_path = os.path.join(downloads if os.path.isdir(downloads) else ROOT, "project_export.txt")
     parts = export(ROOT, out_path, args.include_generated)
     for rel, _, size, _ in parts:
         print("  + %s (%d Bytes)" % (rel, size))
