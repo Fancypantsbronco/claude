@@ -153,6 +153,11 @@ class Puppet {
     armL.rotation.z = 0.05 + Math.sin(t * 2.1) * 0.02;
     armR.rotation.z = -0.05 - Math.sin(t * 2.1) * 0.02;
 
+    if (s.exhausted) {                                     // erschoepft: gebeugt, Arme schlaff
+      torso.rotation.x += 0.28;
+      head.rotation.x += 0.25;
+    }
+
     switch (s.state) {
       case 'walk': {
         const w = Math.sin(s.walkPhase);
@@ -323,7 +328,7 @@ async function mountArena() {
     if (CW.view !== 'live') return;
     for (const ev of e.detail) {
       const per = {};
-      for (const tk of ev.tokens) (per[tk.fighter] = per[tk.fighter] || []).push(tk.token);
+      for (const tk of ev.tokens) if (tk.token !== 'neutral') (per[tk.fighter] = per[tk.fighter] || []).push(tk);
       for (const [fid, toks] of Object.entries(per)) {
         const [x, y] = screenPos(fid, 2.6);
         // Pro Kaempfer nur eine Einblendung gleichzeitig, sonst entsteht bei 4x ein Knaeuel
@@ -333,10 +338,10 @@ async function mountArena() {
         pop.className = 'popup';
         pop.style.left = x + 'px';
         pop.style.top = y + 'px';
-        for (const t of toks) {
+        for (const tk of toks) {
           const b = document.createElement('b');
-          b.style.setProperty('--tok', tokenById[t].color);
-          b.textContent = '+1 ' + tokenById[t].short + ' ';
+          b.style.setProperty('--tok', tokenById[tk.token].color);
+          b.textContent = '+' + (tk.n || 1) + ' ' + tokenById[tk.token].short + ' ';
           pop.append(b);
         }
         if (ev.type === 'hit' && ev.victim === fid) {
@@ -380,6 +385,7 @@ async function mountArena() {
         walkPhase: f.walkPhase,
         sinceHit: (fight.t - f.lastHitT) / Math.max(1, CW.speed),
         downFor: f.state === 'down' ? fight.t - f.downT : 0,
+        exhausted: f.exhausted,
         time,
       });
       const lb = labels[f.id];

@@ -2,106 +2,441 @@
   "meta": {
     "name": "Chaos Arena",
     "tagline": "Hybrider Auto-Battler & Gladiatoren-Manager nach dem Tabula-Rasa-Prinzip",
-    "version": "0.2.0",
-    "step": 2,
+    "version": "0.3.0",
+    "step": 3,
     "updated": "2026-10-03",
     "export_command": "python export_project.py",
     "export_file": "project_export.txt"
   },
-
   "teams": {
-    "A": { "id": "A", "name": "Team Rot", "short": "Rot", "color": "#c4533a" },
-    "B": { "id": "B", "name": "Team Blau", "short": "Blau", "color": "#4a82c0" }
+    "A": {
+      "id": "A",
+      "name": "Team Rot",
+      "short": "Rot",
+      "color": "#c4533a"
+    },
+    "B": {
+      "id": "B",
+      "name": "Team Blau",
+      "short": "Blau",
+      "color": "#4a82c0"
+    }
   },
-
   "roster": [
-    { "id": "A1", "name": "Brakk",  "team": "A", "look": { "skin": "#c99a74", "hair": "irokese", "hair_color": "#2b1d16", "beard": "stoppel", "nose": "knolle", "brows": "wulst", "scar": true } },
-    { "id": "A2", "name": "Olm",    "team": "A", "look": { "skin": "#f0c9a6", "hair": "glatze",  "hair_color": "#b8b2a6", "beard": "voll", "nose": "lang", "brows": "duenn", "scar": false } },
-    { "id": "A3", "name": "Grit",   "team": "A", "look": { "skin": "#8a5a3b", "hair": "zopf",    "hair_color": "#1a1412", "beard": "keiner", "nose": "klein", "brows": "duenn", "scar": false } },
-    { "id": "A4", "name": "Hunold", "team": "A", "look": { "skin": "#e0b48f", "hair": "topf",    "hair_color": "#c46a2a", "beard": "schnauzer", "nose": "knolle", "brows": "wulst", "scar": false } },
-    { "id": "A5", "name": "Mops",   "team": "A", "look": { "skin": "#a8754f", "hair": "seiten",  "hair_color": "#3b2a20", "beard": "kinn", "nose": "klein", "brows": "wulst", "scar": true } },
-    { "id": "B1", "name": "Kasko",  "team": "B", "look": { "skin": "#6b4430", "hair": "stoppeln","hair_color": "#141110", "beard": "voll", "nose": "knolle", "brows": "wulst", "scar": false } },
-    { "id": "B2", "name": "Ulla",   "team": "B", "look": { "skin": "#e0b48f", "hair": "lang",    "hair_color": "#d9b860", "beard": "keiner", "nose": "klein", "brows": "duenn", "scar": false } },
-    { "id": "B3", "name": "Torf",   "team": "B", "look": { "skin": "#c99a74", "hair": "topf",    "hair_color": "#5a3a24", "beard": "stoppel", "nose": "lang", "brows": "duenn", "scar": true } },
-    { "id": "B4", "name": "Rumpel", "team": "B", "look": { "skin": "#f0c9a6", "hair": "seiten",  "hair_color": "#9a9a9a", "beard": "schnauzer", "nose": "knolle", "brows": "wulst", "scar": false } },
-    { "id": "B5", "name": "Zed",    "team": "B", "look": { "skin": "#a8754f", "hair": "irokese", "hair_color": "#7b3a8f", "beard": "keiner", "nose": "lang", "brows": "duenn", "scar": false } }
+    {
+      "id": "A1",
+      "name": "Brakk",
+      "team": "A",
+      "look": {
+        "skin": "#c99a74",
+        "hair": "irokese",
+        "hair_color": "#2b1d16",
+        "beard": "stoppel",
+        "nose": "knolle",
+        "brows": "wulst",
+        "scar": true
+      }
+    },
+    {
+      "id": "A2",
+      "name": "Olm",
+      "team": "A",
+      "look": {
+        "skin": "#f0c9a6",
+        "hair": "glatze",
+        "hair_color": "#b8b2a6",
+        "beard": "voll",
+        "nose": "lang",
+        "brows": "duenn",
+        "scar": false
+      }
+    },
+    {
+      "id": "A3",
+      "name": "Grit",
+      "team": "A",
+      "look": {
+        "skin": "#8a5a3b",
+        "hair": "zopf",
+        "hair_color": "#1a1412",
+        "beard": "keiner",
+        "nose": "klein",
+        "brows": "duenn",
+        "scar": false
+      }
+    },
+    {
+      "id": "A4",
+      "name": "Hunold",
+      "team": "A",
+      "look": {
+        "skin": "#e0b48f",
+        "hair": "topf",
+        "hair_color": "#c46a2a",
+        "beard": "schnauzer",
+        "nose": "knolle",
+        "brows": "wulst",
+        "scar": false
+      }
+    },
+    {
+      "id": "A5",
+      "name": "Mops",
+      "team": "A",
+      "look": {
+        "skin": "#a8754f",
+        "hair": "seiten",
+        "hair_color": "#3b2a20",
+        "beard": "kinn",
+        "nose": "klein",
+        "brows": "wulst",
+        "scar": true
+      }
+    },
+    {
+      "id": "B1",
+      "name": "Kasko",
+      "team": "B",
+      "look": {
+        "skin": "#6b4430",
+        "hair": "stoppeln",
+        "hair_color": "#141110",
+        "beard": "voll",
+        "nose": "knolle",
+        "brows": "wulst",
+        "scar": false
+      }
+    },
+    {
+      "id": "B2",
+      "name": "Ulla",
+      "team": "B",
+      "look": {
+        "skin": "#e0b48f",
+        "hair": "lang",
+        "hair_color": "#d9b860",
+        "beard": "keiner",
+        "nose": "klein",
+        "brows": "duenn",
+        "scar": false
+      }
+    },
+    {
+      "id": "B3",
+      "name": "Torf",
+      "team": "B",
+      "look": {
+        "skin": "#c99a74",
+        "hair": "topf",
+        "hair_color": "#5a3a24",
+        "beard": "stoppel",
+        "nose": "lang",
+        "brows": "duenn",
+        "scar": true
+      }
+    },
+    {
+      "id": "B4",
+      "name": "Rumpel",
+      "team": "B",
+      "look": {
+        "skin": "#f0c9a6",
+        "hair": "seiten",
+        "hair_color": "#9a9a9a",
+        "beard": "schnauzer",
+        "nose": "knolle",
+        "brows": "wulst",
+        "scar": false
+      }
+    },
+    {
+      "id": "B5",
+      "name": "Zed",
+      "team": "B",
+      "look": {
+        "skin": "#a8754f",
+        "hair": "irokese",
+        "hair_color": "#7b3a8f",
+        "beard": "keiner",
+        "nose": "lang",
+        "brows": "duenn",
+        "scar": false
+      }
+    }
   ],
-
   "rules": {
     "duration_s": 60,
     "tick_hz": 30,
-    "base_stats": { "strength": 1, "toughness": 1, "agility": 1 },
+    "start_stats": {
+      "strength": 1,
+      "stamina": 1,
+      "awareness": 1,
+      "dexterity": 1
+    },
     "hp_base": 20,
-    "hp_per_toughness": 10,
-    "hit_chance": 0.5,
+    "hp_per_stamina": 5,
     "damage_min": 1,
     "damage_max": 2,
+    "knockback_base_m": 0.4,
+    "hit_base": 0.3,
+    "hit_per_dex": 0.08,
+    "hit_max": 0.9,
+    "dodge_per_dex": 0.04,
+    "dodge_max": 0.4,
+    "sight_base_m": 1.8,
+    "sight_per_awareness": 1.2,
+    "recognize_full_at": 5,
+    "stamina_base": 12,
+    "stamina_per_stamina": 6,
+    "stamina_swing_cost": 1.0,
+    "stamina_walk_cost_per_m": 0.25,
+    "stamina_regen_per_s": 0.6,
+    "exhausted_slow_factor": 1.5,
+    "exhausted_recover_frac": 0.35,
     "reach_m": 0.95,
     "cone_deg": 60,
     "windup_s": 0.5,
     "recover_s": 0.5,
     "think_min_s": 0.4,
     "think_max_s": 1.2,
-    "flail_chance": 0.08,
+    "flail_chance": 0.05,
     "move_speed_mps": 0.9,
     "heading_noise_deg": 45,
     "stagger_s": 0.45,
-    "knockback_m": 0.4,
-    "sight_m": 5,
     "arena_half_m": 4.6,
     "body_radius_m": 0.3,
+    "friendly_glance_chance": 0.5,
+    "shield_mate_m": 0.8,
+    "shield_enemy_m": 1.6,
+    "shield_s": 5,
+    "wander_m_per_chaos": 8,
+    "neutral_every_s": 10,
+    "bad_aim_min_swings": 6,
+    "bad_aim_max_rate": 0.12,
+    "bad_aim_tokens": 2,
+    "growth": {
+      "strength_per_swing": 0.004,
+      "stamina_per_hit_taken": 0.012,
+      "stamina_per_m": 0.002,
+      "awareness_per_survival": 0.05,
+      "dexterity_per_miss": 0.006
+    },
     "notes": [
-      "Alle Kämpfer starten mit Stärke, Zähigkeit und Geschick 1: 30 Lebenspunkte, 1–2 Schaden pro Treffer, 50 % Trefferchance.",
-      "Ein K.O. braucht im Schnitt 20 Treffer. Getroffene taumeln 0,4 m zurück, darum verteilen sich die Treffer. Laut tools/balance.js endet nur etwa 1 von 500 Kämpfen mit einem K.O.",
-      "Getroffen wird, wer im Moment des Schlags vor dem Angreifer steht. Freund oder Feind spielt keine Rolle."
-    ]
+      "Alle Kämpfer starten mit Stärke, Ausdauer, Bewusstsein und Geschick 1: 30 Lebenspunkte, 30 % Trefferchance, 1,8 m Sicht und keinerlei Freund-Feind-Erkennung.",
+      "Getroffen wird, wer im Moment des Schlags vor dem Angreifer steht. Gilt der Schlag eigentlich einem anderen aus demselben Team, hat das Opfer ihn abgefangen (Hell).",
+      "Trifft ein Kämpfer sein eigenes Team, streift er es in der Hälfte der Fälle nur (Support, kein Schaden). Sonst richtet er Schaden an (Dunkel).",
+      "Nach jedem Kampf wachsen die Attribute ein kleines Stück. Die Werte gelten für die laufende Saison (diese Sitzung)."
+    ],
+    "air_swings_per_chaos": 2
   },
-
   "tokens": [
-    { "id": "damage", "label": "Damage", "short": "DMG", "source": "Treffer auf einen Gegner", "color": "#e8a33a" },
-    { "id": "tank",   "label": "Tank",   "short": "TNK", "source": "Selbst getroffen werden",  "color": "#6fae5f" },
-    { "id": "chaos",  "label": "Chaos",  "short": "CHS", "source": "Daneben oder ins Leere schlagen", "color": "#a67fd8" },
-    { "id": "dark",   "label": "Dunkel", "short": "DNK", "source": "Treffer auf das eigene Team", "color": "#8a90a3" }
+    {
+      "id": "damage",
+      "group": "primary",
+      "label": "Damage",
+      "short": "DMG",
+      "color": "#e8a33a",
+      "active": true,
+      "source": "Schaden an einem Feind austeilen"
+    },
+    {
+      "id": "tank",
+      "group": "primary",
+      "label": "Tank",
+      "short": "TNK",
+      "color": "#6fae5f",
+      "active": true,
+      "source": "Treffer einstecken und überleben"
+    },
+    {
+      "id": "support",
+      "group": "primary",
+      "label": "Support",
+      "short": "SUP",
+      "color": "#d98fc0",
+      "active": true,
+      "source": "Teamkamerad streifen ohne Schaden · 5 s Schulterschluss mit Teamkamerad, während ein Feind nah ist"
+    },
+    {
+      "id": "chaos",
+      "group": "primary",
+      "label": "Chaos",
+      "short": "CHS",
+      "color": "#a67fd8",
+      "active": true,
+      "source": "Jeder 2. Schlag ins Leere · 8 m ziellos laufen ohne jemanden in Sicht · Trefferquote unter 12 % (+2 am Kampfende)"
+    },
+    {
+      "id": "dark",
+      "group": "alignment",
+      "label": "Dunkel",
+      "short": "DNK",
+      "color": "#7a7f94",
+      "active": true,
+      "source": "Teamkamerad Schaden zufügen (Friendly Fire)"
+    },
+    {
+      "id": "light",
+      "group": "alignment",
+      "label": "Hell",
+      "short": "HEL",
+      "color": "#efdc8a",
+      "active": true,
+      "source": "Schlag abfangen, der einem Verbündeten galt · Kampf überleben, ohne je angegriffen worden zu sein"
+    },
+    {
+      "id": "neutral",
+      "group": "alignment",
+      "label": "Neutral",
+      "short": "NEU",
+      "color": "#b5b0a6",
+      "active": true,
+      "source": "Passiv alle 10 s für jeden, der noch steht"
+    },
+    {
+      "id": "scrap",
+      "group": "secondary",
+      "label": "Schrott",
+      "short": "SCH",
+      "color": "#b5804f",
+      "active": false,
+      "source": "Mit einem gefundenen Gegenstand zuschlagen, z. B. einer Bratpfanne",
+      "planned": "braucht Gegenstände in der Arena"
+    },
+    {
+      "id": "tech",
+      "group": "secondary",
+      "label": "Tech",
+      "short": "TEC",
+      "color": "#59c3e0",
+      "active": false,
+      "source": "Blind den Abzug eines gefundenen Blasters drücken",
+      "planned": "braucht Gegenstände in der Arena"
+    },
+    {
+      "id": "mutation",
+      "group": "secondary",
+      "label": "Mutation",
+      "short": "MUT",
+      "color": "#9ed14f",
+      "active": false,
+      "source": "Umweltschaden wie Gift oder Feuer überleben · leuchtende Artefakte essen",
+      "planned": "braucht Umweltgefahren und Dungeons"
+    }
   ],
-
   "nav": [
-    { "group": "Arena", "items": [
-      { "id": "live", "label": "Live-Ansicht", "view": "live" },
-      { "id": "kampf-log", "label": "Kampf-Log", "view": "combatlog" },
-      { "id": "token-abrechnung", "label": "Token-Abrechnung", "view": "ledger" }
-    ] },
-    { "group": "Manager & Hub", "items": [
-      { "id": "roster", "label": "Team-Roster", "view": "roster" },
-      { "id": "evolutionen", "label": "Evolutionen", "view": "placeholder" }
-    ] },
-    { "group": "Werkstatt", "items": [
-      { "id": "modelle", "label": "3D-Modelle", "view": "models" },
-      { "id": "animationen", "label": "Animationen", "view": "animations" },
-      { "id": "ui", "label": "UI", "view": "placeholder" }
-    ] },
-    { "group": "Projekt", "items": [
-      { "id": "konzept", "label": "Konzept", "view": "concept" },
-      { "id": "roadmap", "label": "Roadmap", "view": "roadmap" },
-      { "id": "logbuch", "label": "Logbuch", "view": "logbook" }
-    ] }
+    {
+      "group": "Arena",
+      "items": [
+        {
+          "id": "live",
+          "label": "Live-Ansicht",
+          "view": "live"
+        },
+        {
+          "id": "kampf-log",
+          "label": "Kampf-Log",
+          "view": "combatlog"
+        },
+        {
+          "id": "token-abrechnung",
+          "label": "Token-Abrechnung",
+          "view": "ledger"
+        }
+      ]
+    },
+    {
+      "group": "Manager & Hub",
+      "items": [
+        {
+          "id": "roster",
+          "label": "Team-Roster",
+          "view": "roster"
+        },
+        {
+          "id": "evolutionen",
+          "label": "Evolutionen",
+          "view": "placeholder"
+        }
+      ]
+    },
+    {
+      "group": "Werkstatt",
+      "items": [
+        {
+          "id": "modelle",
+          "label": "3D-Modelle",
+          "view": "models"
+        },
+        {
+          "id": "animationen",
+          "label": "Animationen",
+          "view": "animations"
+        },
+        {
+          "id": "ui",
+          "label": "UI",
+          "view": "placeholder"
+        }
+      ]
+    },
+    {
+      "group": "Projekt",
+      "items": [
+        {
+          "id": "konzept",
+          "label": "Konzept",
+          "view": "concept"
+        },
+        {
+          "id": "roadmap",
+          "label": "Roadmap",
+          "view": "roadmap"
+        },
+        {
+          "id": "logbuch",
+          "label": "Logbuch",
+          "view": "logbook"
+        }
+      ]
+    }
   ],
-
   "sections": {
-    "live": { "title": "Live-Ansicht", "lead": "5 gegen 5, 60 Sekunden, keine Freund-Feind-Erkennung." },
-    "kampf-log": { "title": "Kampf-Log", "lead": "Jeder Schlag des letzten Kampfes mit Zeit, Wurf und erzeugten Token." },
-    "token-abrechnung": { "title": "Token-Abrechnung", "lead": "Token-Stapel pro Kämpfer, aufsummiert über alle Kämpfe dieser Session. Der größte Stapel entscheidet später über die Evolution." },
-    "roster": { "title": "Team-Roster", "lead": "Zehn Kämpfer, zwei Teams. Alle Werte stehen auf 1, nur das Aussehen unterscheidet sie." },
+    "live": {
+      "title": "Live-Ansicht",
+      "lead": "5 gegen 5, 60 Sekunden. Wer vor einem steht, wird geschlagen."
+    },
+    "kampf-log": {
+      "title": "Kampf-Log",
+      "lead": "Jeder Schlag des letzten Kampfes mit Zeit, Wurf und erzeugten Token."
+    },
+    "token-abrechnung": {
+      "title": "Token-Abrechnung",
+      "lead": "Token-Stapel und Attribute pro Kämpfer über die laufende Saison. Prägung (größter Primär-Stapel) und Gesinnung entscheiden später über die Karten."
+    },
+    "roster": {
+      "title": "Team-Roster",
+      "lead": "Zehn Kämpfer, zwei Teams. Alle starten bei 1 und entwickeln sich durch das, was sie in der Arena tun."
+    },
     "evolutionen": {
       "title": "Evolutionen",
       "lead": "Nach vielen Kämpfen darf ein Kämpfer aus 3 Karten wählen. Welche Karten erscheinen, bestimmt sein größter Token-Stapel.",
       "examples": [
-        "Damage-Stapel → Schwere Faust · Blutrausch · Knochenbrecher",
-        "Tank-Stapel → Dicke Haut · Standfest · Schmerzresistenz",
-        "Chaos-Stapel → Wilder Schwinger · Unberechenbar · Rundumschlag"
+        "Fleischschild (Tank) · braucht 25 Tank-Token und Ausdauer ≥ 5",
+        "Billard-Faust (Damage) · braucht 20 Damage-Token und Stärke ≥ 3: Getroffene krachen in andere Kämpfer",
+        "Schulterschluss (Support) · braucht 15 Support-Token und Bewusstsein ≥ 3",
+        "Abgedrehter Wirbel (Chaos) · braucht 40 Chaos-Token und Geschick ≥ 2",
+        "Zäher Hund (Neutral) · kostet 30 Neutral-Token: +5 Lebenspunkte, wenn keine passende Karte erscheint"
       ]
     },
-    "modelle": { "title": "3D-Modelle", "lead": "Per Python erzeugt (tools/lowpoly.py), als .glb mit Gelenken gespeichert und mit glb2web.py in .gltf.json mit eingebettetem Buffer umgewandelt." },
-    "animationen": { "title": "Animationen", "lead": "Prozedural in three.js: Die Gelenke der Modelle (Arme, Beine, Rumpf, Kopf) werden pro Frame gedreht. Keine Keyframes, kein Blender." },
+    "modelle": {
+      "title": "3D-Modelle",
+      "lead": "Per Python erzeugt (tools/lowpoly.py), als .glb mit Gelenken gespeichert und mit glb2web.py in .gltf.json mit eingebettetem Buffer umgewandelt."
+    },
+    "animationen": {
+      "title": "Animationen",
+      "lead": "Prozedural in three.js: Die Gelenke der Modelle (Arme, Beine, Rumpf, Kopf) werden pro Frame gedreht. Keine Keyframes, kein Blender."
+    },
     "ui": {
       "title": "UI",
       "lead": "Bedienelemente und Anzeigen über der Arena.",
@@ -111,61 +446,169 @@
         "Wiederholung eines Kampfes per Seed"
       ]
     },
-    "konzept": { "title": "Konzept", "lead": "Chaos Arena startet bei null: dumme menschliche Kämpfer mit allen Werten auf 1, die blind aufeinander einschlagen. Aus dem, was sie tun, entsteht im Hintergrund ihre Entwicklung." },
-    "roadmap": { "title": "Roadmap", "lead": "Das Spiel wächst Prompt für Prompt. Erledigte Schritte sind beschlossen, die übrigen sind ein Vorschlag." },
-    "logbuch": { "title": "Logbuch", "lead": "Jede Änderung am Projekt bekommt hier einen Eintrag." }
+    "konzept": {
+      "title": "Konzept",
+      "lead": "Chaos Arena startet bei null: dumme menschliche Kämpfer mit allen Werten auf 1, die blind aufeinander einschlagen. Aus dem, was sie tun, entsteht im Hintergrund ihre Entwicklung."
+    },
+    "roadmap": {
+      "title": "Roadmap",
+      "lead": "Das Spiel wächst Prompt für Prompt. Erledigte Schritte sind beschlossen, die übrigen sind ein Vorschlag."
+    },
+    "logbuch": {
+      "title": "Logbuch",
+      "lead": "Jede Änderung am Projekt bekommt hier einen Eintrag."
+    }
   },
-
   "animations": [
-    { "id": "idle", "label": "Stehen", "text": "Leichtes Atmen und Schwanken, Arme hängen." },
-    { "id": "walk", "label": "Laufen", "text": "Beine pendeln gegenläufig zu den Armen, Rumpf wippt mit." },
-    { "id": "swing", "label": "Schlag", "text": "Rechter Arm holt 0,5 s aus, schlägt durch, 0,5 s Erholung. Der Rumpf dreht mit." },
-    { "id": "hit", "label": "Getroffen", "text": "Rumpf und Kopf kippen nach hinten, Körper blitzt kurz auf. 0,45 s Taumeln, laufender Schlag bricht ab." },
-    { "id": "ko", "label": "K.O.", "text": "Kämpfer kippt nach hinten und bleibt liegen." }
+    {
+      "id": "idle",
+      "label": "Stehen",
+      "text": "Leichtes Atmen und Schwanken, Arme hängen."
+    },
+    {
+      "id": "walk",
+      "label": "Laufen",
+      "text": "Beine pendeln gegenläufig zu den Armen, Rumpf wippt mit."
+    },
+    {
+      "id": "swing",
+      "label": "Schlag",
+      "text": "Rechter Arm holt 0,5 s aus, schlägt durch, 0,5 s Erholung. Der Rumpf dreht mit."
+    },
+    {
+      "id": "hit",
+      "label": "Getroffen",
+      "text": "Rumpf und Kopf kippen nach hinten, Körper blitzt kurz auf. 0,45 s Taumeln, laufender Schlag bricht ab."
+    },
+    {
+      "id": "ko",
+      "label": "K.O.",
+      "text": "Kämpfer kippt nach hinten und bleibt liegen."
+    }
   ],
-
   "concept": {
     "pillars": [
-      { "title": "Tabula Rasa", "text": "Alle Kämpfer haben denselben unproportionierten Körper, jeder Wert steht auf 1. Nur Gesicht, Frisur und Hautton unterscheiden sie." },
-      { "title": "Das Chaos", "text": "Es gibt keine Freund-Feind-Erkennung. Kämpfer schlagen auf das ein, was im Moment des Schlags vor ihnen steht." },
-      { "title": "Token-System", "text": "Die Engine verbucht jede Aktion im Hintergrund als Token. Daraus ergibt sich, wer ein Kämpfer wird." },
-      { "title": "Evolution", "text": "Nach vielen Kämpfen bestimmt der größte Token-Stapel, aus welchen 3 Karten ein Kämpfer wählen darf. Später verändert sich dadurch auch sein Körperbau." }
-    ],
-    "token_rules": [
-      { "token": "damage", "rule": "Treffer auf einen Gegner → Damage-Token für den Angreifer" },
-      { "token": "tank", "rule": "Getroffen werden → Tank-Token für das Opfer" },
-      { "token": "chaos", "rule": "Wurf daneben oder niemand vor einem → Chaos-Token" },
-      { "token": "dark", "rule": "Treffer auf das eigene Team → Dunkel-Token statt Damage-Token" }
+      {
+        "title": "Tabula Rasa",
+        "text": "Alle Kämpfer haben denselben unproportionierten Körper, jeder Wert steht auf 1. Nur Gesicht, Frisur und Hautton unterscheiden sie."
+      },
+      {
+        "title": "Das Chaos",
+        "text": "Es gibt keine Freund-Feind-Erkennung. Kämpfer schlagen auf das ein, was im Moment des Schlags vor ihnen steht."
+      },
+      {
+        "title": "Token-System",
+        "text": "Die Engine verbucht jede Aktion als Token in drei Gruppen: Primär (Grundhaltung), Gesinnung (moralischer Kompass) und Sekundär (Waffen- und Elementar-Unfälle)."
+      },
+      {
+        "title": "Learning by Doing",
+        "text": "Stärke, Ausdauer, Bewusstsein und Geschick wachsen nach jedem Kampf ein kleines Stück durch das, was der Kämpfer getan hat. Niemand verteilt Punkte von Hand."
+      },
+      {
+        "title": "Evolution",
+        "text": "Der größte Primär-Stapel und die Gesinnung bestimmen, welche 3 Karten ein Kämpfer ziehen darf. Starke Karten verlangen zusätzlich Mindestwerte, z. B. Ausdauer 5. Neutral-Token kaufen einfache Werte-Karten."
+      }
     ],
     "style": [
-      { "label": "Grafik", "value": "Stylized Low-Poly, flach schattiert, Vertex-Farben" },
-      { "label": "Kamera", "value": "Isometrisch, 45° gedreht, 30° von oben, orthografisch" },
-      { "label": "Ästhetik", "value": "Rohe Arena, simpel und klobig" },
-      { "label": "Technik", "value": "Modelle per Python als .glb mit Gelenken, three.js 0.169 per Importmap" }
+      {
+        "label": "Grafik",
+        "value": "Stylized Low-Poly, flach schattiert, Vertex-Farben"
+      },
+      {
+        "label": "Kamera",
+        "value": "Isometrisch, 45° gedreht, 30° von oben, orthografisch"
+      },
+      {
+        "label": "Ästhetik",
+        "value": "Rohe Arena, simpel und klobig"
+      },
+      {
+        "label": "Technik",
+        "value": "Modelle per Python als .glb mit Gelenken, three.js 0.169 per Importmap"
+      }
     ]
   },
-
   "roadmap": [
-    { "step": 1, "title": "Fundament", "status": "done",
-      "items": ["Workspace und Export-Brücke export_project.py", "Erste Modelle als .glb", "Token-Prototyp mit 50/50-Wurf"] },
-    { "step": 2, "title": "Chaos-Kampf 5 gegen 5", "status": "done",
-      "items": ["10 Kämpfer mit eigenem Gesicht, Frisur und Hautton", "Modelle mit Gelenken und prozeduralen Animationen", "60-Sekunden-Kampf mit blinder Zielwahl und allen 4 Token-Arten", "Auswertung pro Kämpfer, Kampf-Log, Token-Abrechnung", "Workspace im Editor-Look"] },
-    { "step": 3, "title": "Arena-Serie", "status": "proposal",
-      "items": ["Mehrere Kämpfe hintereinander ohne Klick", "Token-Stapel dauerhaft speichern", "Roster mit Verlauf pro Kämpfer"] },
-    { "step": 4, "title": "Evolution", "status": "proposal",
-      "items": ["3-Karten-Auswahl nach größtem Stapel", "Werte steigen über 1", "Körperbau verändert sich mit der Evolution"] }
+    {
+      "step": 1,
+      "title": "Fundament",
+      "status": "done",
+      "items": [
+        "Workspace und Export-Brücke export_project.py",
+        "Erste Modelle als .glb",
+        "Token-Prototyp mit 50/50-Wurf"
+      ]
+    },
+    {
+      "step": 2,
+      "title": "Chaos-Kampf 5 gegen 5",
+      "status": "done",
+      "items": [
+        "10 Kämpfer mit eigenem Gesicht",
+        "Modelle mit Gelenken und prozeduralen Animationen",
+        "60-Sekunden-Kampf mit Auswertung",
+        "Workspace im Editor-Look"
+      ]
+    },
+    {
+      "step": 3,
+      "title": "Token-Ökosystem & Attribute",
+      "status": "done",
+      "items": [
+        "Token in drei Gruppen: Primär, Gesinnung, Sekundär (Sekundär nur geplant)",
+        "Stärke, Ausdauer, Bewusstsein, Geschick mit Wirkung im Kampf",
+        "Erschöpfung, Freund-Feind-Erkennung, Ausweichen, Abfangen, Schulterschluss",
+        "Learning by Doing: Attribute wachsen nach jedem Kampf, Saison-Ansicht"
+      ]
+    },
+    {
+      "step": 4,
+      "title": "Saison speichern",
+      "status": "proposal",
+      "items": [
+        "Saison dauerhaft speichern statt nur in der Sitzung",
+        "Mehrere Kämpfe automatisch hintereinander",
+        "Verlauf pro Kämpfer"
+      ]
+    },
+    {
+      "step": 5,
+      "title": "Evolution",
+      "status": "proposal",
+      "items": [
+        "3-Karten-Auswahl nach Prägung und Gesinnung",
+        "Karten mit Mindestwerten (z. B. Fleischschild ab Ausdauer 5)",
+        "Neutral-Token für einfache Werte-Karten",
+        "Körperbau verändert sich mit der Evolution"
+      ]
+    },
+    {
+      "step": 6,
+      "title": "Gegenstände & Umwelt",
+      "status": "proposal",
+      "items": [
+        "Bratpfanne, Blaster, Medkit in der Arena",
+        "Schrott-, Tech- und Mutations-Token",
+        "Gift und Feuer als Umweltschaden",
+        "Billard-Rückstoß: Getroffene krachen in andere"
+      ]
+    }
   ],
-
   "assets": [
-    { "id": "human_base", "name": "Basis-Mensch", "category": "Kämpfer",
-      "glb": "assets/models/human_base.glb", "web": "models/human_base.gltf.json",
+    {
+      "id": "human_base",
+      "name": "Basis-Mensch",
+      "category": "Kämpfer",
+      "glb": "assets/models/human_base.glb",
+      "web": "models/human_base.gltf.json",
       "script": "models/build_models.py · build_fighter()",
-      "description": "Gemeinsamer Körper aller Kämpfer: weich, unsportlich, kurze Beine, leichter Bauch. Neutraler Lendenschurz, 7 Gelenke." }
+      "description": "Gemeinsamer Körper aller Kämpfer: weich, unsportlich, kurze Beine, leichter Bauch. Neutraler Lendenschurz, 7 Gelenke."
+    }
   ],
-
   "logbook": [
     {
-      "version": "0.1.0", "date": "2026-10-03",
+      "version": "0.1.0",
+      "date": "2026-10-03",
       "title": "Projektstart: Workspace, Export-Brücke, Start-Modelle, Token-Prototyp",
       "changes": [
         "Workspace-Website mit Navigation. Alle Inhalte kommen aus data/state.json.",
@@ -175,7 +618,8 @@
       ]
     },
     {
-      "version": "0.2.0", "date": "2026-10-03",
+      "version": "0.2.0",
+      "date": "2026-10-03",
       "title": "Chaos-Kampf 5 gegen 5 mit Animationen und Auswertung",
       "changes": [
         "Kampf-Engine (web/js/combat.js): 60 Sekunden, feste Zeitschritte, Seed für wiederholbare Kämpfe. Blinde Zielwahl: getroffen wird, wer vor dem Angreifer steht.",
@@ -186,6 +630,66 @@
         "Workspace neu im Engine-Editor-Look: Projekt- und Szenenbaum links, Viewport in der Mitte, Inspector rechts, Konsole unten.",
         "tools/balance.js simuliert viele Kämpfe ohne Grafik und prüft die Balance (K.O.-Quote, Token pro Kampf)."
       ]
+    },
+    {
+      "version": "0.3.0",
+      "date": "2026-10-03",
+      "title": "Token-Ökosystem und Learning by Doing",
+      "changes": [
+        "Token neu in drei Gruppen: Primär (Damage, Tank, Support, Chaos), Gesinnung (Dunkel, Hell, Neutral) und Sekundär (Schrott, Tech, Mutation; noch ohne Quelle, weil Gegenstände und Umwelt fehlen).",
+        "Neue Quellen: Streifschläge am eigenen Team und Schulterschluss geben Support, abgefangene Schläge und unbehelligtes Überleben geben Hell, zielloses Laufen und eine miserable Trefferquote geben Chaos, Neutral fließt passiv alle 10 s.",
+        "Ein Fehlschlag auf ein Ziel gibt kein Chaos mehr. Chaos kommt nur noch vom Schlag ins Leere, vom ziellosen Laufen und von einer Trefferquote unter 20 %.",
+        "Vier Kern-Attribute mit Wirkung: Stärke (Schaden, Rückstoß), Ausdauer (Lebenspunkte, Erschöpfung), Bewusstsein (Sichtradius, Freund-Feind-Erkennung), Geschick (Trefferchance, Ausweichen). Trefferchance zu Beginn nur 30 %.",
+        "Learning by Doing: Nach jedem Kampf wachsen die Attribute aus dem Kampfprotokoll. Die Werte gelten für die laufende Saison (Sitzung).",
+        "Auswertung zeigt Prägung, Gesinnung und Attribut-Zuwachs. Token-Abrechnung wird zur Saison-Ansicht. tools/balance.js simuliert ganze Saisons."
+      ]
+    }
+  ],
+  "attributes": [
+    {
+      "id": "strength",
+      "label": "Stärke",
+      "short": "STÄ",
+      "effect": "Schaden pro Treffer (1–2 × Stärke) und Rückstoß (0,4 m × Stärke).",
+      "grows": "Jeder Nahkampfschlag, egal ob Freund, Feind oder Luft: +0,004."
+    },
+    {
+      "id": "stamina",
+      "label": "Ausdauer",
+      "short": "AUS",
+      "effect": "Lebenspunkte (20 + 10 × Ausdauer) und Kraftreserve. Leer = erschöpft: langsamer laufen, langsamer ausholen.",
+      "grows": "Eingesteckter Treffer +0,012, jeder gelaufene Meter +0,004."
+    },
+    {
+      "id": "awareness",
+      "label": "Bewusstsein",
+      "short": "BEW",
+      "effect": "Sichtradius (1,8 m bei Stufe 1, +1,2 m je Stufe). Ab über 1 setzt die Freund-Feind-Erkennung ein, ab 5 ist sie vollständig.",
+      "grows": "Jeder überlebte Kampf +0,05. Später auch durch Karten."
+    },
+    {
+      "id": "dexterity",
+      "label": "Geschick",
+      "short": "GES",
+      "effect": "Trefferchance (30 % bei Stufe 1, +8 % je Stufe) und Ausweichen (+4 % je Stufe über 1).",
+      "grows": "Jeder verfehlte Schlag, ins Leere oder ausgewichen: +0,006."
+    }
+  ],
+  "token_groups": [
+    {
+      "id": "primary",
+      "label": "Primär",
+      "text": "Die physische Grundhaltung. Der größte Stapel ist die Prägung des Kämpfers."
+    },
+    {
+      "id": "alignment",
+      "label": "Gesinnung",
+      "text": "Der moralische Kompass. Dunkel gegen Hell entscheidet die Gesinnung, Neutral ist Basis-Währung für reine Werte-Karten."
+    },
+    {
+      "id": "secondary",
+      "label": "Sekundär",
+      "text": "Waffen- und Elementaraffinitäten aus absurden Unfällen. Braucht Gegenstände und Umweltgefahren, die es in der Arena noch nicht gibt."
     }
   ]
 }

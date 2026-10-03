@@ -7,14 +7,20 @@
   'use strict';
 
   const state = JSON.parse(document.getElementById('state-data').textContent);
-  const { createFight, topStack, TOKEN_IDS } = window.ChaosCombat;
+  const { createFight, topStack, alignmentOf, derive, TOKEN_IDS, ATTRS } = window.ChaosCombat;
   const tokenById = Object.fromEntries(state.tokens.map((t) => [t.id, t]));
+  const activeTokens = state.tokens.filter((t) => t.active);
+  const primaryTokens = state.tokens.filter((t) => t.group === 'primary');
+  const groups = state.token_groups.map((g) => ({ ...g, tokens: state.tokens.filter((t) => t.group === g.id) }));
+  const attrById = Object.fromEntries(state.attributes.map((a) => [a.id, a]));
+  const ALIGN = { dark: tokenById.dark, light: tokenById.light, neutral: tokenById.neutral };
   const rosterById = Object.fromEntries(state.roster.map((r) => [r.id, r]));
   const teamOf = (id) => state.teams[rosterById[id].team];
 
   const CW = {
     state, fight: null, alpha: 0, speed: 1, running: false, selected: null,
     portraits: {}, fightNo: 0, lastSummary: null, ledger: {}, fightsDone: 0, view: 'live',
+    season: { stats: {} }, // Attribute pro Kaempfer, wachsen nach jedem Kampf (nur in dieser Sitzung)
   };
   window.ChaosWorkspace = CW;
 
@@ -46,6 +52,12 @@
   };
   const emit = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }));
   const randomSeed = () => 1 + Math.floor(Math.random() * 99999);
+  const fmt2 = (v) => v.toFixed(2).replace('.', ',');
+  const fmtDelta = (v) => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toFixed(2).replace('.', ',');
+  const fmtHp = (v) => (Math.round(v * 10) / 10).toString().replace('.', ',');
+  const pct = (v) => Math.round(v * 100) + ' %';
+  const seasonStats = (id) => ({ ...state.rules.start_stats, ...(CW.season.stats[id] || {}) });
+  const chip = (t, text) => h('span', { class: 'top-chip', style: '--tok:' + t.color }, text || t.label);
 
   const STATE_LABEL = { idle: 'steht', walk: 'läuft', windup: 'holt aus', recover: 'schlägt', stagger: 'taumelt', down: 'K.O.' };
   const LOOK_LABEL = {
@@ -83,7 +95,7 @@
   let last = performance.now();
 
   function newFight(seed) {
-    CW.fight = createFight(state, seed);
+    CW.fight = createFight(state, seed, CW.season.stats);
     CW.fightNo += 1;
     CW.running = false;
     CW.lastSummary = null;
@@ -119,6 +131,7 @@
       l.fights += 1;
       if (row.ko) l.kos += 1;
       for (const t of TOKEN_IDS) l.tokens[t] += row.tokens[t];
+      CW.season.stats[row.id] = row.growth.after; // Learning by Doing: gilt ab dem naechsten Kampf
     }
     renderResults();
     results.hidden = false;
@@ -286,24 +299,26 @@
     if (!CW.selected) {
       const R = state.rules;
       const teamTotals = teamTokenTotals();
+      const d = derive(R, R.start_stats);
       insp.append(
         h('div', { class: 'insp-block' },
-          h('h3', null, 'Kampf #' + CW.fightNo + ' · Seed ' + f.seed),
+          h('h3', null, 'Kampf #' + CW.fightNo + ' · Seed ' + f.seed + ' · Saison-Kampf ' + (CW.fightsDone + 1)),
           h('p', { class: 'insp-empty' }, 'Klick auf einen Kämpfer im Viewport oder in der Szene, um ihn zu inspizieren.')),
         h('div', { class: 'insp-block' },
           h('h3', null, 'Token je Team'),
-          Object.values(state.teams).map((team) => h('dl', { class: 'kv' },
-            h('dt', null, h('span', { class: 'insp-sub' }, h('i', { class: 'team-dot', style: '--team:' + team.color }), team.name)), h('dd', null, ''),
-            state.tokens.map((t) => [h('dt', null, t.label), h('dd', { style: 'color:' + t.color }, teamTotals[team.id][t.id])])))),
+          h('dl', { class: 'kv' },
+            h('dt', null, ''), h('dd', null, Object.values(state.teams).map((t) => h('span', { style: 'color:' + t.color + ';margin-left:10px' }, t.short))),
+            activeTokens.map((t) => [h('dt', { style: 'color:' + t.color }, t.label),
+              h('dd', null, Object.keys(state.teams).map((tid) => h('span', { style: 'display:inline-block;min-width:34px' }, teamTotals[tid][t.id])))]))),
         h('div', { class: 'insp-block' },
-          h('h3', null, 'Regeln'),
+          h('h3', null, 'Startwerte (alle Attribute 1)'),
           h('dl', { class: 'kv' },
             h('dt', null, 'Kampfdauer'), h('dd', null, R.duration_s + ' s'),
-            h('dt', null, 'Lebenspunkte'), h('dd', null, R.hp_base + R.hp_per_toughness * R.base_stats.toughness),
-            h('dt', null, 'Trefferchance'), h('dd', null, Math.round(R.hit_chance * 100) + ' %'),
-            h('dt', null, 'Schaden'), h('dd', null, R.damage_min + '–' + R.damage_max),
-            h('dt', null, 'Reichweite'), h('dd', null, num(R.reach_m, 2) + ' m'),
-            h('dt', null, 'Ausholen / Erholen'), h('dd', null, num(R.windup_s, 1) + ' / ' + num(R.recover_s, 1) + ' s'))));
+            h('dt', null, 'Lebenspunkte'), h('dd', null, d.maxHp),
+            h('dt', null, 'Trefferchance'), h('dd', null, pct(d.hit)),
+            h('dt', null, 'Sichtradius'), h('dd', null, num(d.sight, 1) + ' m'),
+            h('dt', null, 'Freund-Feind-Erkennung'), h('dd', null, pct(d.recognize)),
+            h('dt', null, 'Schaden'), h('dd', null, R.damage_min + '–' + R.damage_max))));
       return;
     }
     const r = rosterById[CW.selected];
@@ -313,6 +328,9 @@
     const statRefs = {};
     const hpBar = hpbar(ff.hp, ff.maxHp);
     const hpText = h('span', null, '');
+    const stBar = hpbar(ff.stamina, ff.d.staminaMax);
+    stBar.classList.add('stamina');
+    const stText = h('span', null, '');
     const stateText = h('span', null, '');
     insp.append(
       h('div', { class: 'insp-head' },
@@ -320,27 +338,33 @@
         h('div', null,
           h('h2', null, r.name),
           h('p', { class: 'insp-sub' }, h('i', { class: 'team-dot', style: '--team:' + team.color }), team.name, ' · ', r.id, ' · ', stateText))),
-      h('div', { class: 'hp-big' }, hpBar, hpText),
+      h('div', { class: 'hp-big' }, hpBar, hpText, stBar, stText),
       h('div', { class: 'insp-block' },
-        h('h3', null, 'Werte'),
-        h('div', { class: 'statgrid' },
-          [['Stärke', 'strength'], ['Zähigkeit', 'toughness'], ['Geschick', 'agility']].map(([label, key]) =>
-            h('div', { class: 'stat' }, h('span', null, label), h('b', null, ff.stats[key]))))),
-      h('div', { class: 'insp-block' },
-        h('h3', null, 'Token-Stapel'),
-        h('div', { class: 'stacks' }, state.tokens.map((t) => {
+        h('h3', null, 'Attribute'),
+        h('div', { class: 'statgrid statgrid-4' },
+          state.attributes.map((a) => h('div', { class: 'stat', title: a.effect },
+            h('span', null, a.label), h('b', null, fmt2(ff.stats[a.id]))))),
+        h('dl', { class: 'kv' },
+          h('dt', null, 'Trefferchance · Ausweichen'), h('dd', null, pct(ff.d.hit) + ' · ' + pct(ff.d.dodge)),
+          h('dt', null, 'Sichtradius'), h('dd', null, num(ff.d.sight, 1) + ' m'),
+          h('dt', null, 'Freund-Feind-Erkennung'), h('dd', null, pct(ff.d.recognize)),
+          h('dt', null, 'Rückstoß'), h('dd', null, num(ff.d.knockback, 2) + ' m'))),
+      ...groups.map((g) => h('div', { class: 'insp-block' },
+        h('h3', null, g.label + (g.id === 'primary' ? ' · größter Stapel = Prägung' : g.id === 'secondary' ? ' · geplant' : '')),
+        h('div', { class: 'stacks' }, g.tokens.map((t) => {
           const bar = h('i');
           const val = h('b', null, '0');
-          const row = h('div', { class: 'stack', style: '--tok:' + t.color }, h('span', null, t.label), h('span', { class: 'stack-bar' }, bar), val);
+          const row = h('div', { class: 'stack' + (t.active ? '' : ' is-off'), style: '--tok:' + t.color, title: t.source }, h('span', null, t.label), h('span', { class: 'stack-bar' }, bar), val);
           stackRefs[t.id] = { row, bar, val };
           return row;
-        }))),
+        })))),
       h('div', { class: 'insp-block' },
         h('h3', null, 'Statistik'),
         h('dl', { class: 'kv' }, [
-          ['swings', 'Schläge'], ['hits', 'Treffer'], ['misses', 'Daneben'], ['air', 'Ins Leere'],
-          ['friendly_hits', 'Eigentreffer'], ['damage_dealt', 'Schaden ausgeteilt'], ['damage_taken', 'Schaden erlitten'],
-          ['interrupted', 'Schlag unterbrochen'], ['distance', 'Strecke (m)'],
+          ['swings', 'Schläge'], ['hits', 'Treffer mit Schaden'], ['glances', 'Streifschläge (eigenes Team)'], ['misses', 'Daneben'],
+          ['air', 'Ins Leere'], ['dodged', 'Gegner ausgewichen'], ['dodges', 'Selbst ausgewichen'], ['friendly_hits', 'Friendly Fire'],
+          ['held_back', 'Teamkamerad erkannt'], ['intercepts', 'Schläge abgefangen'], ['damage_dealt', 'Schaden ausgeteilt'],
+          ['damage_taken', 'Schaden erlitten'], ['distance', 'Strecke (m)'], ['exhausted_s', 'Erschöpft (s)'],
         ].map(([key, label]) => {
           const dd = h('dd', null, '0');
           statRefs[key] = dd;
@@ -355,7 +379,7 @@
           h('dt', null, 'Nase'), h('dd', null, LOOK_LABEL.nose[r.look.nose]),
           h('dt', null, 'Brauen'), h('dd', null, LOOK_LABEL.brows[r.look.brows]),
           h('dt', null, 'Narbe'), h('dd', null, r.look.scar ? 'ja' : 'nein'))));
-    inspRefs = { id: r.id, hpBar, hpText, stateText, stackRefs, statRefs };
+    inspRefs = { id: r.id, hpBar, hpText, stBar, stText, stateText, stackRefs, statRefs };
     refreshInspector();
   }
 
@@ -363,17 +387,24 @@
     if (!inspRefs) { if (!CW.selected) renderInspectorTotals(); return; }
     const ff = CW.fight.byId[inspRefs.id];
     setHp(inspRefs.hpBar, ff.hp, ff.maxHp);
-    inspRefs.hpText.textContent = ff.hp + ' / ' + ff.maxHp + ' LP';
-    inspRefs.stateText.textContent = STATE_LABEL[ff.state];
-    const max = Math.max(1, ...TOKEN_IDS.map((t) => ff.tokens[t]));
+    inspRefs.hpText.textContent = fmtHp(ff.hp) + ' / ' + fmtHp(ff.maxHp) + ' LP';
+    setHp(inspRefs.stBar, ff.stamina, ff.d.staminaMax);
+    inspRefs.stText.textContent = 'Kraft ' + Math.round(ff.stamina) + ' / ' + Math.round(ff.d.staminaMax) + (ff.exhausted ? ' · erschöpft' : '');
+    inspRefs.stateText.textContent = STATE_LABEL[ff.state] + (ff.exhausted && ff.state !== 'down' ? ', erschöpft' : '');
     const top = topStack(ff.tokens);
-    for (const [t, ref] of Object.entries(inspRefs.stackRefs)) {
-      ref.val.textContent = ff.tokens[t];
-      ref.bar.style.width = (100 * ff.tokens[t]) / max + '%';
-      ref.row.classList.toggle('is-top', t === top);
+    const align = alignmentOf(ff.tokens);
+    for (const g of groups) {
+      const max = Math.max(1, ...g.tokens.map((t) => ff.tokens[t.id]));
+      for (const t of g.tokens) {
+        const ref = inspRefs.stackRefs[t.id];
+        ref.val.textContent = ff.tokens[t.id];
+        ref.bar.style.width = (100 * ff.tokens[t.id]) / max + '%';
+        ref.row.classList.toggle('is-top', t.id === top || (g.id === 'alignment' && t.id === align && align !== 'neutral'));
+      }
     }
     for (const [key, dd] of Object.entries(inspRefs.statRefs)) {
-      dd.textContent = key === 'distance' ? num(ff.record.distance, 1) : ff.record[key];
+      const v = ff.record[key];
+      dd.textContent = key === 'distance' || key === 'exhausted_s' || key.startsWith('damage') ? num(v, 1) : v;
     }
   }
 
@@ -395,7 +426,7 @@
   const consoleLog = $('console-log');
   const consoleScroll = $('console-scroll');
   const LOG_FILTERS = [
-    ['all', 'Alle'], ['hit', 'Treffer'], ['friendly', 'Eigentreffer'], ['miss', 'Daneben'], ['air', 'Ins Leere'],
+    ['all', 'Alle'], ['hit', 'Treffer'], ['friendly', 'Eigenes Team'], ['miss', 'Daneben'], ['air', 'Ins Leere'], ['passive', 'Passiv'],
   ];
   let logFilter = 'all';
   const filterBox = $('log-filters');
@@ -419,27 +450,45 @@
   function eventLine(ev) {
     let cls = 'k-sys';
     let msg;
+    const roll = () => ' · W100 ' + ev.roll + (ev.roll <= ev.threshold ? ' ≤ ' : ' > ') + ev.threshold;
     switch (ev.type) {
       case 'start': msg = ['Kampf #' + CW.fightNo + ' gestartet · Seed ' + CW.fight.seed + ' · ' + state.rules.duration_s + ' s']; break;
       case 'end': msg = ['Kampfende nach ' + state.rules.duration_s + ' s']; break;
       case 'hit':
         cls = 'k-hit f-hit' + (ev.friendly ? ' f-friendly' : '');
-        msg = [nameSpan(ev.attacker), ev.friendly ? ' trifft Teamkamerad ' : ' trifft ', nameSpan(ev.victim),
-          ' · W100 ' + ev.roll + ' ≤ ' + ev.threshold + ' · −' + ev.dmg + ' LP (' + ev.hp + ')'];
+        msg = [nameSpan(ev.attacker), ev.friendly ? ' trifft Teamkamerad ' : ' trifft ', nameSpan(ev.victim), roll(),
+          ' · −' + fmtHp(ev.dmg) + ' LP (' + fmtHp(ev.hp) + ')',
+          ev.intercepted ? [' · fängt den Schlag für ', nameSpan(ev.intended), ' ab'] : null];
+        break;
+      case 'glance':
+        cls = 'k-hit f-friendly';
+        msg = [nameSpan(ev.attacker), ' streift Teamkamerad ', nameSpan(ev.victim), roll(), ' · kein Schaden'];
         break;
       case 'miss':
         cls = 'k-miss f-miss';
-        msg = [nameSpan(ev.attacker), ' schlägt nach ', nameSpan(ev.victim), ' · daneben · W100 ' + ev.roll + ' > ' + ev.threshold];
+        msg = [nameSpan(ev.attacker), ' schlägt nach ', nameSpan(ev.victim), ' · daneben', roll()];
+        break;
+      case 'dodge':
+        cls = 'k-miss f-miss';
+        msg = [nameSpan(ev.victim), ' weicht ', nameSpan(ev.attacker), ' aus'];
         break;
       case 'air': cls = 'k-air f-air'; msg = [nameSpan(ev.attacker), ' schlägt ins Leere']; break;
+      case 'wander': cls = 'k-air f-passive'; msg = [nameSpan(ev.attacker), ' irrt ' + state.rules.wander_m_per_chaos + ' m ziellos umher']; break;
+      case 'shield': cls = 'k-miss f-passive'; msg = [nameSpan(ev.attacker), ' steht ' + state.rules.shield_s + ' s Schulter an Schulter vor dem Feind']; break;
+      case 'neutral': cls = 'k-miss f-passive'; msg = ['Alle, die noch stehen, sammeln Neutral']; break;
+      case 'bad-aim': cls = 'k-air f-passive'; msg = [nameSpan(ev.attacker), ' trifft nur ' + ev.rate + ' % seiner Schläge']; break;
+      case 'untouched': cls = 'k-hit f-passive'; msg = [nameSpan(ev.attacker), ' übersteht den Kampf, ohne einmal angegriffen zu werden']; break;
       case 'ko': cls = 'k-ko f-hit'; msg = [nameSpan(ev.victim), ' geht K.O. (durch ', nameSpan(ev.attacker), ')']; break;
       default: msg = [ev.type];
     }
+    const toks = ev.type === 'neutral'
+      ? [h('span', { class: 'tk', style: '--tok:' + tokenById.neutral.color }, '+1 ' + tokenById.neutral.short + ' × ' + ev.tokens.length)]
+      : ev.tokens.map((tk) => h('span', { class: 'tk', style: '--tok:' + tokenById[tk.token].color },
+        '+' + (tk.n || 1) + ' ' + tokenById[tk.token].short + ' ' + rosterById[tk.fighter].name));
     return h('li', { class: cls },
       h('span', { class: 't' }, clock(ev.t)),
       h('span', { class: 'msg' }, msg),
-      h('span', { class: 'toks' }, ev.tokens.map((tk) =>
-        h('span', { class: 'tk', style: '--tok:' + tokenById[tk.token].color }, '+1 ' + tokenById[tk.token].short + ' ' + rosterById[tk.fighter].name))));
+      h('span', { class: 'toks' }, toks));
   }
 
   function appendLog(events) {
@@ -480,12 +529,12 @@
     for (const ff of f.fighters) {
       const r = sceneRows[ff.id];
       setHp(r.bar, ff.hp, ff.maxHp);
-      r.st.textContent = STATE_LABEL[ff.state];
+      r.st.textContent = ff.exhausted && ff.state !== 'down' ? 'erschöpft' : STATE_LABEL[ff.state];
     }
     const totals = teamTokenTotals();
     for (const [team, el] of Object.entries(hudRows)) {
       const alive = f.fighters.filter((x) => x.team === team && x.state !== 'down').length;
-      el.textContent = ' ' + alive + '/5 · ' + state.tokens.map((t) => t.short + ' ' + totals[team][t.id]).join(' · ');
+      el.textContent = ' ' + alive + '/5 · ' + primaryTokens.map((t) => t.short + ' ' + totals[team][t.id]).join(' · ') + ' · ' + ['dark', 'light'].map((t) => tokenById[t].short + ' ' + totals[team][t]).join(' · ');
     }
     if (force) renderInspector(); else refreshInspector();
     $('status-left').textContent = 'three.js ' + (window.ChaosArena3D ? 'r' + window.ChaosArena3D.three : 'lädt') +
@@ -493,26 +542,42 @@
   }
 
   function resultTable(rows, opts) {
-    const cols = [
-      ['swings', 'Schläge'], ['hits', 'Treffer'], ['misses', 'Daneben'], ['air', 'Leere'],
-      ['friendly_hits', 'Eigen'], ['damage_dealt', 'Schaden +'], ['damage_taken', 'Schaden −'],
+    const cols = opts.ledger ? [] : [
+      ['swings', 'Schläge'], ['hits', 'Treffer'], ['air', 'Leere'], ['glances', 'Streif'], ['friendly_hits', 'Eigen'],
+      ['intercepts', 'Abgef.'], ['damage_dealt', 'Schad. +'], ['damage_taken', 'Schad. −'],
     ];
+    const toks = activeTokens;
+    const cell = (v, t) => h('td', { class: v ? 'tok' : 'zero', style: '--tok:' + t.color }, v);
     return h('div', { class: 'table-wrap' }, h('table', { class: 'data' },
       h('thead', null, h('tr', null,
         h('th', { scope: 'col' }, 'Kämpfer'),
         opts.ledger ? [h('th', { scope: 'col' }, 'Kämpfe'), h('th', { scope: 'col' }, 'K.O.')] : h('th', { scope: 'col' }, 'LP'),
-        opts.ledger ? null : cols.map(([, label], i) => h('th', { scope: 'col', class: i === 0 ? 'grp' : '' }, label)),
-        state.tokens.map((t, i) => h('th', { scope: 'col', class: i === 0 ? 'grp' : '', style: 'color:' + t.color }, t.short)),
-        h('th', { scope: 'col', class: 'grp' }, 'Größter Stapel'))),
+        h('th', { scope: 'col', class: 'grp' }, 'Prägung'),
+        h('th', { scope: 'col' }, 'Gesinnung'),
+        state.attributes.map((a, i) => h('th', { scope: 'col', class: i === 0 ? 'grp' : '', title: a.label }, a.short)),
+        toks.map((t, i) => h('th', { scope: 'col', class: i === 0 || t.id === 'dark' ? 'grp' : '', style: 'color:' + t.color, title: t.source }, t.short)),
+        cols.map(([, label], i) => h('th', { scope: 'col', class: i === 0 ? 'grp' : '' }, label)))),
       h('tbody', null, rows.map((row) => {
         const top = topStack(row.tokens);
+        const align = alignmentOf(row.tokens);
         return h('tr', { onclick: () => { if (opts.onPick) opts.onPick(row.id); } },
           h('td', null, h('span', { class: 'who' }, portrait(row.id), h('span', null, rosterById[row.id].name,
             row.ko && !opts.ledger ? h('span', { class: 'ko-tag' }, ' K.O.') : null))),
-          opts.ledger ? [h('td', null, row.fights), h('td', null, row.kos)] : h('td', null, row.hp + '/' + row.maxHp),
-          opts.ledger ? null : cols.map(([key], i) => h('td', { class: i === 0 ? 'grp' : '' }, row.record[key])),
-          state.tokens.map((t, i) => h('td', { class: (i === 0 ? 'grp ' : '') + (row.tokens[t.id] ? 'tok' : 'zero'), style: '--tok:' + t.color }, row.tokens[t.id])),
-          h('td', { class: 'grp' }, top ? h('span', { class: 'top-chip', style: '--tok:' + tokenById[top].color }, tokenById[top].label) : '–'));
+          opts.ledger ? [h('td', null, row.fights), h('td', null, row.kos)] : h('td', null, fmtHp(row.hp) + '/' + fmtHp(row.maxHp)),
+          h('td', { class: 'grp' }, top ? chip(tokenById[top]) : '–'),
+          h('td', null, chip(ALIGN[align])),
+          state.attributes.map((a, i) => {
+            const v = opts.ledger ? row.stats[a.id] : row.growth.after[a.id];
+            const d = opts.ledger ? v - state.rules.start_stats[a.id] : row.growth.delta[a.id];
+            return h('td', { class: i === 0 ? 'grp' : '', title: a.label },
+              fmt2(v), h('small', { class: 'delta' + (d > 0 ? ' up' : '') }, ' ' + fmtDelta(d)));
+          }),
+          toks.map((t, i) => {
+            const c = cell(row.tokens[t.id], t);
+            if (i === 0 || t.id === 'dark') c.classList.add('grp');
+            return c;
+          }),
+          cols.map(([key], i) => h('td', { class: i === 0 ? 'grp' : '' }, key.startsWith('damage') ? fmtHp(row.record[key]) : row.record[key])));
       }))));
   }
 
@@ -529,7 +594,8 @@
           h('button', { class: 'btn btn-primary', type: 'button', onclick: () => { newFight(randomSeed()); play(); } }, '▶ Neuer Kampf'))),
       h('div', { class: 'team-sum' }, Object.values(state.teams).map((team) =>
         h('span', null, h('i', { class: 'team-dot', style: '--team:' + team.color }), h('b', null, team.name),
-          state.tokens.map((t) => h('span', { style: 'color:' + t.color }, ' ' + t.short + ' ' + totals[team.id][t.id]))))),
+          activeTokens.map((t) => h('span', { style: 'color:' + t.color }, ' ' + t.short + ' ' + totals[team.id][t.id]))))),
+      h('p', { class: 'results-note' }, 'Die Attribute sind schon um den Zuwachs aus diesem Kampf erhöht (kleine Zahl) und gelten ab dem nächsten Kampf.'),
       resultTable(s.rows, { onPick: select }));
   }
 
@@ -581,11 +647,17 @@
   };
 
   views.ledger = (id) => {
-    const rows = state.roster.map((r) => ({ id: r.id, ...(CW.ledger[r.id] || { fights: 0, kos: 0, tokens: Object.fromEntries(TOKEN_IDS.map((t) => [t, 0])) }) }));
+    const rows = state.roster.map((r) => ({
+      id: r.id, stats: seasonStats(r.id),
+      ...(CW.ledger[r.id] || { fights: 0, kos: 0, tokens: Object.fromEntries(TOKEN_IDS.map((t) => [t, 0])) }),
+    }));
     return h('section', { class: 'doc' },
       docHead(id, h('p', { class: 'mono', style: 'color:var(--muted);font-size:12px' },
-        CW.fightsDone + ' Kämpfe ausgewertet · nur im Speicher dieser Sitzung (dauerhaft ab Schritt 3)')),
-      h('div', { class: 'card' }, resultTable(rows, { ledger: true, onPick: (rid) => { location.hash = 'live'; select(rid); } })));
+        'Saison: ' + CW.fightsDone + ' Kämpfe ausgewertet · Attribute mit Zuwachs seit Saisonbeginn · nur im Speicher dieser Sitzung')),
+      h('div', { class: 'card' }, resultTable(rows, { ledger: true, onPick: (rid) => { location.hash = 'live'; select(rid); } })),
+      h('h2', null, 'So wachsen die Attribute'),
+      h('dl', { class: 'facts', style: 'max-width:820px;font-size:13px;gap:6px 14px' },
+        state.attributes.map((a) => [h('dt', null, a.label), h('dd', null, a.grows)])));
   };
 
   views.roster = (id) => h('section', { class: 'doc' }, docHead(id),
@@ -594,15 +666,17 @@
       h('div', { class: 'grid-cards' }, state.roster.filter((r) => r.team === team.id).map((r) => {
         const l = CW.ledger[r.id];
         const top = l ? topStack(l.tokens) : null;
+        const align = l ? alignmentOf(l.tokens) : null;
         return h('article', { class: 'card' },
           h('img', { class: 'thumb thumb-portrait', alt: 'Porträt ' + r.name, 'data-portrait': r.id, src: CW.portraits[r.id] || null }),
           h('div', { class: 'card-body' },
             h('h3', null, h('i', { class: 'team-dot', style: '--team:' + team.color }), r.name, h('span', { class: 'mono', style: 'color:var(--dim);font-weight:400' }, r.id)),
             h('dl', { class: 'facts' },
-              h('dt', null, 'Werte'), h('dd', null, 'Stärke 1 · Zähigkeit 1 · Geschick 1'),
+              h('dt', null, 'Attribute'), h('dd', null, state.attributes.map((a) => a.short + ' ' + fmt2(seasonStats(r.id)[a.id])).join(' · ')),
               h('dt', null, 'Aussehen'), h('dd', null, [LOOK_LABEL.hair[r.look.hair], 'Bart: ' + LOOK_LABEL.beard[r.look.beard], 'Nase: ' + LOOK_LABEL.nose[r.look.nose]].join(' · ') + (r.look.scar ? ' · Narbe' : '')),
               h('dt', null, 'Kämpfe'), h('dd', null, l ? l.fights : 0),
-              h('dt', null, 'Größter Stapel'), h('dd', null, top ? h('span', { class: 'top-chip', style: '--tok:' + tokenById[top].color }, tokenById[top].label) : '–'))));
+              h('dt', null, 'Prägung'), h('dd', null, top ? chip(tokenById[top]) : '–'),
+              h('dt', null, 'Gesinnung'), h('dd', null, align ? chip(ALIGN[align]) : '–'))));
       }))]));
 
   views.models = (id) => {
@@ -641,11 +715,16 @@
     const c = state.concept;
     return h('section', { class: 'doc' }, docHead(id),
       h('div', { class: 'pillars' }, c.pillars.map((p) => h('article', { class: 'pillar' }, h('h3', null, p.title), h('p', null, p.text)))),
-      h('h2', null, 'Token-Regeln'),
-      h('ul', { class: 'rules' }, c.token_rules.map((r) => {
-        const t = tokenById[r.token];
-        return h('li', null, h('span', { class: 'top-chip', style: '--tok:' + t.color }, t.label), h('span', null, r.rule));
-      })),
+      h('h2', null, 'Token-Ökosystem'),
+      groups.map((g) => h('div', { class: 'token-group' },
+        h('h3', null, g.label, h('span', null, g.text)),
+        h('ul', { class: 'rules' }, g.tokens.map((t) => h('li', { class: t.active ? '' : 'is-off' },
+          chip(t), h('span', null, t.source),
+          h('span', { class: 'pill ' + (t.active ? 'pill-done' : 'pill-plan') }, t.active ? 'aktiv' : t.planned)))))),
+      h('h2', null, 'Kern-Attribute'),
+      h('div', { class: 'table-wrap card' }, h('table', { class: 'data data-text' },
+        h('thead', null, h('tr', null, h('th', null, 'Attribut'), h('th', null, 'Wirkung im Kampf'), h('th', null, 'Wächst durch'))),
+        h('tbody', null, state.attributes.map((a) => h('tr', null, h('td', null, h('b', null, a.label)), h('td', null, a.effect), h('td', null, a.grows)))))),
       h('h2', null, 'Kampfregeln'),
       h('ul', { class: 'notes' }, state.rules.notes.map((n) => h('li', null, n))),
       h('h2', null, 'Look & Technik'),
