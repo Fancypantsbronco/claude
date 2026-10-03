@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orc Character Workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ------------------------------------------------------------------
+     Farb-Tokens (einmal zentral, damit das UI leicht umzustylen ist)
+     ------------------------------------------------------------------ */
+  :root {
+    --bg: #14171c;
+    --panel: rgba(18, 16, 14, 0.78);
+    --panel-border: #8a6a32;
+    --gold: #e8c46a;
+    --gold-dim: #a8873f;
+    --text: #efe6d2;
+    --text-dim: #b3a78d;
+    --btn: #2a241c;
+    --btn-hover: #3a3024;
+    --btn-active: #6b2a1a;
+    --btn-active-border: #e07a3a;
+    --on: #5fa83c;
+    --off: #6a5f52;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+               font-family: 'Inter', system-ui, sans-serif; }
+  #viewport { position: fixed; inset: 0; }
+  #viewport canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+  /* ---------------- Schwebendes Menü ---------------- */
+  .panel {
+    position: fixed; top: 16px; left: 16px; width: 260px;
+    padding: 14px 14px 12px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,220,150,0.06);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    user-select: none; -webkit-user-select: none;
+  }
+  .panel h1 {
+    margin: 0 0 2px; font-family: 'Cinzel', serif; font-size: 17px; letter-spacing: 0.06em;
+    color: var(--gold); text-shadow: 0 1px 0 #000;
+  }
+  .panel .sub { margin: 0 0 12px; font-size: 11px; color: var(--text-dim); }
+  .group-label {
+    font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--gold-dim); margin: 10px 0 6px; display: flex; align-items: center; gap: 8px;
+  }
+  .group-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--gold-dim), transparent); }
+  .row { display: grid; gap: 6px; }
+  .row.three { grid-template-columns: repeat(3, 1fr); }
+  button {
+    font: 500 12px 'Inter', system-ui, sans-serif; color: var(--text);
+    background: linear-gradient(180deg, var(--btn-hover), var(--btn));
+    border: 1px solid #5a4728; border-radius: 6px; padding: 8px 6px; cursor: pointer;
+    transition: background .15s, border-color .15s, transform .05s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  button:hover { border-color: var(--gold-dim); }
+  button:active { transform: translateY(1px); }
+  button.active { background: linear-gradient(180deg, #8a3a22, var(--btn-active)); border-color: var(--btn-active-border); color: #fff; }
+  button .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--off); box-shadow: inset 0 0 0 1px rgba(0,0,0,.5); }
+  button.on .dot { background: var(--on); box-shadow: 0 0 6px var(--on); }
+  .row.toggles button { justify-content: flex-start; padding-left: 10px; }
+  .hint { margin-top: 12px; font-size: 10.5px; line-height: 1.5; color: var(--text-dim); }
+  kbd { font: 10px 'Inter', monospace; padding: 0 4px; border: 1px solid #5a4728; border-radius: 3px; color: var(--text); }
+
+  /* Fehleranzeige, falls three.js nicht geladen werden kann */
+  #error { position: fixed; inset: auto 16px 16px 16px; padding: 12px; display: none;
+           background: #3a1414; border: 1px solid #a33; border-radius: 8px; font-size: 12px; white-space: pre-wrap; }
+
+  /* Schmale Bildschirme: Menü wandert nach unten */
+  @media (max-width: 600px) {
+    .panel { top: auto; bottom: 16px; left: 16px; right: 16px; width: auto; }
+    .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="viewport"></div>
+
+<div class="panel" id="ui">
+  <h1>Orc Workspace</h1>
+  <p class="sub">Blockout-Rig · Sockets · Code-Animationen</p>
+
+  <div class="group-label">Animation</div>
+  <div class="row three">
+    <button data-anim="idle" class="active">Idle</button>
+    <button data-anim="walk">Walk</button>
+    <button data-anim="attack">Attack</button>
+  </div>
+
+  <div class="group-label">Ausrüstung</div>
+  <div class="row toggles">
+    <button id="btn-sword"><span class="dot"></span>Toggle Sword</button>
+    <button id="btn-shoulders"><span class="dot"></span>Toggle Shoulder Armor</button>
+  </div>
+
+  <div class="hint">
+    Ziehen: drehen · Scrollen/Pinch: zoomen · Rechtsklick: verschieben<br>
+    Tasten: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> Animation · <kbd>S</kbd> Schwert · <kbd>A</kbd> Schultern
+  </div>
+</div>
+
+<div id="error"></div>
+
+<script>
+  // Klassisches Script: fängt Ladefehler des Moduls ab (z. B. CDN offline), damit keine leere Seite bleibt.
+  window.addEventListener('error', (e) => {
+    const box = document.getElementById('error');
+    box.style.display = 'block';
+    box.textContent = '3D-Ansicht konnte nicht starten:\n' + (e.message || e.type);
+  }, true);
+</script>
+
+<script type="module">
+/* =====================================================================
+   ORC CHARACTER WORKSPACE
+   ---------------------------------------------------------------------
+   Aufbau dieser Datei:
+     1. Imports & Konfiguration
+     2. Szene (Renderer, Kamera, Licht, Podest)
+     3. Rig-Helfer (Joints, Meshes, Rest-Pose)
+     4. Ork-Blockout (hierarchisches Skelett aus Primitives)
+     5. Ausrüstungssystem (Sockets, Equip/Unequip, glTF-Anbindung)
+     6. Item-Fabriken (Schwert, Schulterpanzer)
+     7. Animationssystem (Clips, Crossfade, One-Shots)
+     8. Clips: Idle, Walk, Attack
+     9. UI & Render-Loop
+
+   Imports laufen über volle jsDelivr-"+esm"-URLs statt einer Importmap.
+   So startet die Datei auch in älteren Safari-Versionen direkt per
+   Doppelklick. Der +esm-Endpunkt löst das "import 'three'" der Addons
+   auf dieselbe three-Instanz auf.
+   ===================================================================== */
+
+// ---------------------------------------------------------------------
+// 1. IMPORTS & KONFIGURATION
+// ---------------------------------------------------------------------
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169.0/+esm';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/controls/OrbitControls.js/+esm';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/GLTFLoader.js/+esm';
+
+const CONFIG = {
+  crossfade: 0.25,          // Sekunden für weiche Übergänge zwischen Animationen
+  equipPopTime: 0.22,       // Sekunden für den "Pop-in"-Effekt beim Ausrüsten
+  shadowMapSize: 2048,
+};
+
+// Zentrale Farbpalette (stilisiert, leicht gesättigt – WoW-Look)
+const PALETTE = {
+  skin:        0x5f9a3c,
+  skinDark:    0x41702a,
+  skinLight:   0x79b24c,
+  tusk:        0xf1e6c8,
+  eye:         0xffc23a,
+  hair:        0x1d1612,
+  leather:     0x6b4423,
+  leatherDark: 0x452a16,
+  cloth:       0x5a3a20,
+  clothTrim:   0x8e2b1c,
+  metal:       0x9aa4ae,
+  metalDark:   0x5b636c,
+  gold:        0xc9a03a,
+  gem:         0xd8261c,
+  stone:       0x6c6874,
+  stoneDark:   0x45424c,
+  rune:        0xff8a2a,
+};
+
+// ---------------------------------------------------------------------
+// 2. SZENE
+// ---------------------------------------------------------------------
+const container = document.getElementById('viewport');
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;   // weiche Schatten
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = makeGradientTexture('#3b4a63', '#171a20');
+scene.fog = new THREE.Fog(0x1a1d24, 12, 32);
+
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(3.6, 2.5, 6.4);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1.4, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 1.8;
+controls.maxDistance = 14;
+controls.maxPolarAngle = Math.PI / 2 - 0.04;   // nicht unter den Boden schauen
+controls.update();
+
+// --- Licht: Hemisphere/Ambient als weiche Grundhelligkeit, warme Key-Light-Sonne mit Schatten,
+//     kühles Rim-Light von hinten für die typische stilisierte Silhouette.
+scene.add(new THREE.HemisphereLight(0xb4cbff, 0x3a2a1c, 0.75));
+scene.add(new THREE.AmbientLight(0xffffff, 0.18));
+
+const sun = new THREE.DirectionalLight(0xffe0b0, 2.4);
+sun.position.set(4, 7, 5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(CONFIG.shadowMapSize, CONFIG.shadowMapSize);
+sun.shadow.camera.left = -3.5; sun.shadow.camera.right = 3.5;
+sun.shadow.camera.top = 4.5;   sun.shadow.camera.bottom = -2.5;
+sun.shadow.camera.near = 1;    sun.shadow.camera.far = 20;
+sun.shadow.bias = -0.0006;
+sun.shadow.normalBias = 0.02;
+sun.shadow.radius = 4;
+scene.add(sun);
+
+const rim = new THREE.DirectionalLight(0x7fb0ff, 1.3);
+rim.position.set(-4, 3.5, -5);
+scene.add(rim);
+
+// Fackel-artiges Punktlicht, das leicht flackert (siehe Render-Loop)
+const torch = new THREE.PointLight(0xff8a3a, 6, 7, 1.8);
+torch.position.set(-2.1, 0.9, 1.6);
+scene.add(torch);
+
+/** Vertikaler Farbverlauf als Hintergrund (billiger als eine Skybox). */
+function makeGradientTexture(top, bottom) {
+  const c = document.createElement('canvas');
+  c.width = 2; c.height = 256;
+  const g = c.getContext('2d');
+  const grd = g.createLinearGradient(0, 0, 0, 256);
+  grd.addColorStop(0, top);
+  grd.addColorStop(1, bottom);
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 2, 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Stilisiertes achteckiges Steinpodest mit glühenden Runen, darunter ein dezentes Gitter. */
+function buildArena() {
+  const arena = new THREE.Group();
+  arena.name = 'Arena';
+
+  const stone = mat(PALETTE.stone);
+  const stoneDark = mat(PALETTE.stoneDark);
+
+  // Unterer Sockel, Hauptplatte, eingelassene Innenfläche
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(2.45, 2.65, 0.22, 8), stoneDark);
+  base.position.y = -0.36;
+  const plate = new THREE.Mesh(new THREE.CylinderGeometry(2.15, 2.3, 0.26, 8), stone);
+  plate.position.y = -0.13;
+  const inset = new THREE.Mesh(new THREE.CylinderGeometry(1.75, 1.75, 0.02, 8), stoneDark);
+  inset.position.y = 0.0;
+  [base, plate, inset].forEach(m => { m.rotation.y = Math.PI / 8; m.receiveShadow = true; m.castShadow = true; arena.add(m); });
+
+  // Runensteine am Rand
+  const runeMat = new THREE.MeshStandardMaterial({ color: PALETTE.rune, emissive: PALETTE.rune, emissiveIntensity: 1.6, flatShading: true });
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const r = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.03, 0.06), runeMat);
+    r.position.set(Math.sin(a) * 1.95, 0.005, Math.cos(a) * 1.95);
+    r.rotation.y = a;
+    arena.add(r);
+  }
+
+  // Ein paar Bruchsteine für Charakter
+  const rubble = [[2.5, -0.35, 1.2, 0.25], [-2.6, -0.38, -0.9, 0.18], [1.4, -0.4, -2.6, 0.22]];
+  rubble.forEach(([x, y, z, s]) => {
+    const r = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), stoneDark);
+    r.position.set(x, y, z); r.rotation.set(x, z, y);
+    r.castShadow = r.receiveShadow = true;
+    arena.add(r);
+  });
+
+  // Boden + Gitter
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(40, 48), mat(0x23272e));
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -0.47;
+  floor.receiveShadow = true;
+  arena.add(floor);
+
+  const grid = new THREE.GridHelper(40, 40, 0x3a4250, 0x2c323c);
+  grid.position.y = -0.465;
+  grid.material.transparent = true;
+  grid.material.opacity = 0.55;
+  arena.add(grid);
+
+  scene.add(arena);
+}
+
+// ---------------------------------------------------------------------
+// 3. RIG-HELFER
+// ---------------------------------------------------------------------
+
+/** Material-Cache: gleiche Farbe -> gleiches Material (spart Draw-State-Wechsel). */
+const materialCache = new Map();
+function mat(color, opts = {}) {
+  const key = color + JSON.stringify(opts);
+  if (!materialCache.has(key)) {
+    materialCache.set(key, new THREE.MeshStandardMaterial({
+      color, roughness: 0.85, metalness: 0.0, flatShading: true, ...opts,
+    }));
+  }
+  return materialCache.get(key);
+}
+
+/**
+ * Verjüngte Box (oben/unten unterschiedlich breit) aus einem 4-seitigen Zylinder.
+ * Ideal für wuchtige Torsos, Trapezmuskeln, Becken.
+ */
+function taperBox(wTop, wBottom, h, d) {
+  const g = new THREE.CylinderGeometry(Math.SQRT1_2, Math.SQRT1_2, 1, 4, 1);
+  g.rotateY(Math.PI / 4);
+  // obere und untere Vertices getrennt skalieren
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const top = p.getY(i) > 0;
+    p.setX(i, p.getX(i) * (top ? wTop : wBottom));
+    p.setZ(i, p.getZ(i) * d);
+    p.setY(i, p.getY(i) * h);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+/**
+ * Erstellt ein Gelenk (THREE.Group) als Kind von `parent`.
+ * Gelenke sind die "Bones" unseres Code-Rigs – nur sie werden animiert.
+ * Später können dieselben Namen auf Bones eines glTF-SkinnedMesh gemappt werden.
+ */
+function joint(rig, name, parent, pos = [0, 0, 0], rot = [0, 0, 0]) {
+  const j = new THREE.Group();
+  j.name = name;
+  j.position.set(...pos);
+  j.rotation.set(...rot);
+  parent.add(j);
+  rig.bones[name] = j;
+  return j;
+}
+
+/** Hängt ein Mesh (sichtbare Geometrie) an ein Gelenk. Meshes selbst werden nie animiert. */
+function part(geometry, material, parent, pos = [0, 0, 0], rot = [0, 0, 0], scale = [1, 1, 1]) {
+  const m = new THREE.Mesh(geometry, material);
+  m.position.set(...pos);
+  m.rotation.set(...rot);
+  m.scale.set(...scale);
+  m.castShadow = true;
+  m.receiveShadow = true;
+  parent.add(m);
+  return m;
+}
+
+/** Speichert die aktuelle Pose aller Bones als Rest-Pose. Animationen sind Offsets dazu. */
+function captureRestPose(rig) {
+  for (const bone of Object.values(rig.bones)) {
+    bone.userData.restPos = bone.position.clone();
+    bone.userData.restRot = bone.rotation.clone();
+  }
+}
+
+// ---------------------------------------------------------------------
+// 4. ORK-BLOCKOUT
+// ---------------------------------------------------------------------
+/*
+   Hierarchie (vereinfacht):
+
+   root
+   └─ hips ─┬─ spine ── chest ─┬─ neck ── head ── jaw
+            │                  ├─ clavicle_L ─┬─ [socket_shoulder_L]
+            │                  │              └─ upperArm_L ── foreArm_L ── hand_L ── [socket_hand_L]
+            │                  └─ clavicle_R ─┬─ [socket_shoulder_R]
+            │                                 └─ upperArm_R ── foreArm_R ── hand_R ── [socket_hand_R]
+            ├─ cloth_F / cloth_B   (Lendenschurz, sekundäre Bewegung)
+            ├─ thigh_L ── shin_L ── foot_L
+            └─ thigh_R ── shin_R ── foot_R
+
+   Konventionen: Der Ork schaut nach +Z, seine linke Seite ist +X.
+   rotation.x < 0 an Armen/Beinen = Glied nach vorne schwingen.
+*/
+function buildOrc() {
+  const rig = { root: new THREE.Group(), bones: {}, sockets: {} };
+  rig.root.name = 'Orc';
+
+  const skin = mat(PALETTE.skin);
+  const skinDark = mat(PALETTE.skinDark);
+  const skinLight = mat(PALETTE.skinLight);
+  const leather = mat(PALETTE.leather);
+  const leatherDark = mat(PALETTE.leatherDark);
+  const cloth = mat(PALETTE.cloth, { side: THREE.DoubleSide });
+  const trim = mat(PALETTE.clothTrim, { side: THREE.DoubleSide });
+  const tusk = mat(PALETTE.tusk, { roughness: 0.5 });
+  const hair = mat(PALETTE.hair);
+  const eye = new THREE.MeshStandardMaterial({ color: PALETTE.eye, emissive: PALETTE.eye, emissiveIntensity: 1.4 });
+  const gold = mat(PALETTE.gold, { metalness: 0.6, roughness: 0.4 });
+
+  // ---------- Becken ----------
+  const hips = joint(rig, 'hips', rig.root, [0, 1.16, 0]);
+  part(taperBox(0.92, 0.72, 0.36, 0.62), skin, hips, [0, -0.02, 0]);
+  // Gürtel mit Schnalle
+  part(taperBox(1.0, 0.96, 0.14, 0.7), leatherDark, hips, [0, 0.13, 0]);
+  part(new THREE.BoxGeometry(0.2, 0.18, 0.06), gold, hips, [0, 0.13, 0.36]);
+
+  // Lendenschurz vorne/hinten – eigene Gelenke für Flatter-Bewegung
+  const clothF = joint(rig, 'cloth_F', hips, [0, 0.08, 0.33]);
+  part(taperBox(0.42, 0.5, 0.62, 0.035), cloth, clothF, [0, -0.32, 0]);
+  part(new THREE.BoxGeometry(0.5, 0.06, 0.045), trim, clothF, [0, -0.6, 0]);
+  const clothB = joint(rig, 'cloth_B', hips, [0, 0.08, -0.32]);
+  part(taperBox(0.55, 0.62, 0.68, 0.035), cloth, clothB, [0, -0.35, 0]);
+  part(new THREE.BoxGeometry(0.62, 0.06, 0.045), trim, clothB, [0, -0.66, 0]);
+
+  // ---------- Beine (leicht angewinkelt, breiter Stand) ----------
+  for (const side of ['L', 'R']) {
+    const s = side === 'L' ? 1 : -1;
+    const thigh = joint(rig, `thigh_${side}`, hips, [0.27 * s, -0.12, 0], [-0.38, 0, 0.12 * s]);
+    part(new THREE.CylinderGeometry(0.21, 0.16, 0.52, 7), skin, thigh, [0, -0.26, 0]);
+    part(new THREE.IcosahedronGeometry(0.155, 0), skinDark, thigh, [0, -0.52, 0.02]);        // Knie
+
+    const shin = joint(rig, `shin_${side}`, thigh, [0, -0.52, 0], [0.62, 0, -0.06 * s]);
+    part(new THREE.CylinderGeometry(0.15, 0.12, 0.5, 7), skin, shin, [0, -0.25, 0]);
+    part(new THREE.CylinderGeometry(0.155, 0.14, 0.26, 7), leather, shin, [0, -0.36, 0]);   // Wickel
+
+    const foot = joint(rig, `foot_${side}`, shin, [0, -0.5, 0], [-0.24, 0, -0.06 * s]);
+    part(new THREE.BoxGeometry(0.28, 0.15, 0.44), leatherDark, foot, [0, -0.07, 0.09]);
+    part(new THREE.BoxGeometry(0.26, 0.08, 0.12), skinDark, foot, [0, -0.1, 0.32]);         // Zehen
+  }
+
+  // ---------- Wirbelsäule & Bauch (nach vorn gebeugt = bulliger Ork-Buckel) ----------
+  const spine = joint(rig, 'spine', hips, [0, 0.16, 0], [0.22, 0, 0]);
+  part(taperBox(1.12, 0.9, 0.46, 0.72), skin, spine, [0, 0.2, 0.02]);
+  part(new THREE.BoxGeometry(0.5, 0.3, 0.08), skinLight, spine, [0, 0.18, 0.37]);           // Bauchmuskeln
+
+  // ---------- Brustkorb: extrem breit ----------
+  const chest = joint(rig, 'chest', spine, [0, 0.42, 0], [0.16, 0, 0]);
+  part(taperBox(1.72, 1.12, 0.78, 0.88), skin, chest, [0, 0.38, 0]);
+  part(new THREE.BoxGeometry(0.48, 0.32, 0.12), skinLight, chest, [0.25, 0.48, 0.42], [0.1, 0.15, 0]);   // Brustmuskeln
+  part(new THREE.BoxGeometry(0.48, 0.32, 0.12), skinLight, chest, [-0.25, 0.48, 0.42], [0.1, -0.15, 0]);
+  part(taperBox(0.62, 1.3, 0.3, 0.7), skin, chest, [0, 0.86, -0.06]);                           // Trapez (Nackenwulst)
+  part(new THREE.BoxGeometry(0.06, 0.5, 0.06), leatherDark, chest, [0.3, 0.5, 0.45], [0, 0, 0.75]);  // Brustgurt
+  part(new THREE.BoxGeometry(0.06, 0.5, 0.06), leatherDark, chest, [0.3, 0.5, -0.45], [0, 0, 0.75]);
+
+  // ---------- Nacken & Kopf (dick, nach vorne geschoben) ----------
+  const neck = joint(rig, 'neck', chest, [0, 0.86, 0.12], [-0.3, 0, 0]);
+  part(new THREE.CylinderGeometry(0.27, 0.36, 0.3, 7), skin, neck, [0, 0.1, 0]);
+
+  const head = joint(rig, 'head', neck, [0, 0.2, 0.08], [-0.05, 0, 0]);
+  part(new THREE.BoxGeometry(0.46, 0.4, 0.48), skin, head, [0, 0.2, 0]);                    // Schädel
+  part(new THREE.BoxGeometry(0.52, 0.11, 0.16), skinDark, head, [0, 0.31, 0.2], [0.25, 0, 0]);  // Stirnwulst
+  part(new THREE.BoxGeometry(0.13, 0.12, 0.12), skinDark, head, [0, 0.18, 0.27]);           // breite Nase
+  part(new THREE.BoxGeometry(0.09, 0.035, 0.02), eye, head, [0.11, 0.245, 0.245]);          // Augen
+  part(new THREE.BoxGeometry(0.09, 0.035, 0.02), eye, head, [-0.11, 0.245, 0.245]);
+  for (const s of [1, -1]) {                                                                 // spitze Ohren
+    part(new THREE.ConeGeometry(0.07, 0.32, 4), skin, head, [0.27 * s, 0.24, -0.04], [0, 0.5 * s, -1.85 * s]);
+  }
+  part(new THREE.BoxGeometry(0.14, 0.12, 0.34), hair, head, [0, 0.44, -0.02]);              // Haarkamm
+  part(new THREE.ConeGeometry(0.08, 0.42, 5), hair, head, [0, 0.38, -0.34], [-2.4, 0, 0]);  // Zopf
+
+  // Unterkiefer mit Hauern (eigenes Gelenk, z. B. für Brüllen)
+  const jaw = joint(rig, 'jaw', head, [0, 0.1, 0.02]);
+  part(new THREE.BoxGeometry(0.56, 0.2, 0.5), skin, jaw, [0, -0.06, 0.06]);
+  for (const s of [1, -1]) {
+    part(new THREE.ConeGeometry(0.045, 0.2, 5), tusk, jaw, [0.17 * s, 0.1, 0.26], [0.15, 0, -0.25 * s]);
+  }
+
+  // ---------- Arme: Schlüsselbein -> Oberarm -> Unterarm -> Hand ----------
+  for (const side of ['L', 'R']) {
+    const s = side === 'L' ? 1 : -1;
+
+    // Schlüsselbein/Schulter: hebt sich beim Atmen & Ausholen. Trägt den Schulter-Socket.
+    const clavicle = joint(rig, `clavicle_${side}`, chest, [0.66 * s, 0.62, -0.02]);
+    part(new THREE.IcosahedronGeometry(0.33, 1), skin, clavicle, [0.08 * s, 0.02, 0]);      // Deltamuskel
+    rig.sockets[`shoulder_${side}`] = makeSocket(`socket_shoulder_${side}`, clavicle, [0.16 * s, 0.12, 0], [0, 0, -0.4 * s]);
+
+    const upperArm = joint(rig, `upperArm_${side}`, clavicle, [0.14 * s, -0.05, 0], [0.05, 0, 0.32 * s]);
+    part(new THREE.CylinderGeometry(0.23, 0.18, 0.58, 7), skin, upperArm, [0, -0.29, 0]);
+    part(new THREE.IcosahedronGeometry(0.17, 0), skinLight, upperArm, [0, -0.25, 0.12]);   // Bizeps
+
+    const foreArm = joint(rig, `foreArm_${side}`, upperArm, [0, -0.58, 0], [-0.45, 0, -0.12 * s]);
+    part(new THREE.CylinderGeometry(0.2, 0.15, 0.52, 7), skin, foreArm, [0, -0.26, 0]);     // Popeye-Unterarm
+    part(new THREE.CylinderGeometry(0.19, 0.17, 0.24, 7), leather, foreArm, [0, -0.36, 0]); // Armschiene
+    part(new THREE.BoxGeometry(0.06, 0.25, 0.06), gold, foreArm, [0.18 * s, -0.36, 0]);
+
+    const hand = joint(rig, `hand_${side}`, foreArm, [0, -0.52, 0], [0, 0, 0]);
+    part(new THREE.BoxGeometry(0.28, 0.27, 0.27), skin, hand, [0, -0.14, 0.01]);            // große Faust
+    part(new THREE.BoxGeometry(0.29, 0.08, 0.1), skinDark, hand, [0, -0.2, 0.13]);          // Knöchel
+    part(new THREE.BoxGeometry(0.09, 0.15, 0.1), skinDark, hand, [-0.15 * s, -0.1, 0.1]);   // Daumen
+
+    // Hand-Socket: Item-Achse +Y zeigt aus der Faust nach vorn (leicht nach unten geneigt)
+    rig.sockets[`hand_${side}`] = makeSocket(`socket_hand_${side}`, hand, [0, -0.14, 0.01], [Math.PI / 2 + 0.45, 0, 0]);
+  }
+
+  captureRestPose(rig);
+  return rig;
+}
+
+// ---------------------------------------------------------------------
+// 5. AUSRÜSTUNGSSYSTEM
+// ---------------------------------------------------------------------
+/*
+   Ein Socket ist eine leere THREE.Group, die als Kind eines Gelenks hängt.
+   Alles, was in einen Socket gesteckt wird, erbt automatisch dessen Welt-Transform
+   und bewegt sich daher mit dem Körperteil mit – ganz ohne Extra-Code pro Frame.
+
+   Konvention für Items (auch für eigene glTF-Exporte):
+     - Ursprung (0,0,0) = Griff- bzw. Befestigungspunkt
+     - Waffen: Klinge zeigt entlang +Y
+     - Schulterteile: Oberseite zeigt nach +Y, Außenseite nach +X (linke Schulter)
+*/
+function makeSocket(name, parent, pos, rot) {
+  const s = new THREE.Group();
+  s.name = name;
+  s.position.set(...pos);
+  s.rotation.set(...rot);
+  parent.add(s);
+  return s;
+}
+
+class EquipmentManager {
+  constructor(rig) {
+    this.rig = rig;
+    this.equipped = {};   // socketName -> Object3D
+    this.pops = [];       // laufende Pop-in-Effekte
+  }
+
+  /** Steckt ein Object3D in einen Socket. Ersetzt, was dort vorher war. */
+  equip(socketName, object) {
+    const socket = this.rig.sockets[socketName];
+    if (!socket) throw new Error(`Unbekannter Socket: ${socketName}`);
+    this.unequip(socketName);
+    object.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    socket.add(object);
+    this.equipped[socketName] = object;
+    // kleiner "Pop"-Effekt für Feedback
+    object.userData.baseScale = object.scale.clone();
+    object.scale.setScalar(0.001);
+    this.pops.push({ object, t: 0 });
+    return object;
+  }
+
+  unequip(socketName) {
+    const obj = this.equipped[socketName];
+    if (!obj) return;
+    obj.parent.remove(obj);
+    this.pops = this.pops.filter(p => p.object !== obj);
+    delete this.equipped[socketName];
+  }
+
+  isEquipped(socketName) { return !!this.equipped[socketName]; }
+
+  /**
+   * glTF-Anbindung: lädt ein exportiertes Modell und steckt es in einen Socket.
+   * `offset` korrigiert Exporter-Unterschiede (Blender: Y-up kommt korrekt an,
+   * aber Größe/Griffpunkt passen selten auf Anhieb).
+   *
+   * Beispiel (Browser-Konsole):
+   *   orcWorkspace.equipment.equipFromGLTF('hand_R', './models/my_axe.gltf',
+   *       { scale: 0.8, rotation: [0, Math.PI, 0], position: [0, -0.1, 0] });
+   */
+  async equipFromGLTF(socketName, url, offset = {}) {
+    const gltf = await gltfLoader.loadAsync(url);
+    const wrapper = new THREE.Group();          // Wrapper hält die Korrektur, das Modell bleibt unangetastet
+    wrapper.name = `gltf:${url}`;
+    const model = gltf.scene;
+    if (offset.scale !== undefined) model.scale.setScalar(offset.scale);
+    if (offset.rotation) model.rotation.set(...offset.rotation);
+    if (offset.position) model.position.set(...offset.position);
+    wrapper.add(model);
+    return this.equip(socketName, wrapper);
+  }
+
+  update(dt) {
+    for (const p of this.pops) {
+      p.t = Math.min(1, p.t + dt / CONFIG.equipPopTime);
+      // Overshoot-Ease: kurz größer als 1, dann einschwingen
+      const k = 1 + Math.sin(p.t * Math.PI) * 0.25 * (1 - p.t);
+      const e = Math.sin(p.t * Math.PI / 2) * k;
+      p.object.scale.copy(p.object.userData.baseScale).multiplyScalar(Math.max(e, 0.001));
+    }
+    this.pops = this.pops.filter(p => p.t < 1);
+  }
+}
+
+const gltfLoader = new GLTFLoader();
+
+// ---------------------------------------------------------------------
+// 6. ITEM-FABRIKEN (Platzhalter – später durch glTF ersetzen)
+// ---------------------------------------------------------------------
+
+/** Wuchtiges, klobiges Low-Poly-Schwert. Ursprung = Griffmitte, Klinge entlang +Y. */
+function createSword() {
+  const sword = new THREE.Group();
+  sword.name = 'Item_Sword';
+
+  const steel = mat(PALETTE.metal, { metalness: 0.75, roughness: 0.35 });
+  const steelDark = mat(PALETTE.metalDark, { metalness: 0.7, roughness: 0.45 });
+  const gold = mat(PALETTE.gold, { metalness: 0.7, roughness: 0.35 });
+  const grip = mat(PALETTE.leatherDark);
+  const gem = new THREE.MeshStandardMaterial({ color: PALETTE.gem, emissive: PALETTE.gem, emissiveIntensity: 0.6, roughness: 0.2, flatShading: true });
+  const runeMat = new THREE.MeshStandardMaterial({ color: 0x66ccff, emissive: 0x3aa8ff, emissiveIntensity: 2.0 });
+
+  // Griff + Knauf
+  part(new THREE.CylinderGeometry(0.055, 0.06, 0.42, 6), grip, sword, [0, 0, 0]);
+  part(new THREE.OctahedronGeometry(0.09, 0), gold, sword, [0, -0.27, 0]);
+
+  // Parierstange: breit, mit nach oben geschwungenen Enden
+  part(new THREE.BoxGeometry(0.6, 0.11, 0.16), gold, sword, [0, 0.25, 0]);
+  for (const s of [1, -1]) {
+    part(new THREE.ConeGeometry(0.07, 0.22, 4), gold, sword, [0.33 * s, 0.32, 0], [0, 0, -0.6 * s]);
+  }
+  part(new THREE.OctahedronGeometry(0.07, 0), gem, sword, [0, 0.25, 0.09]);
+
+  // Klinge: extrudierte 2D-Form mit Fase (Bevel) für eine harte Low-Poly-Schneide
+  const w = 0.17;
+  const shape = new THREE.Shape();
+  shape.moveTo(-w, 0);
+  shape.lineTo(w, 0);
+  shape.lineTo(w + 0.04, 0.55);       // Klinge wird zur Mitte hin breiter (klobig)
+  shape.lineTo(w - 0.02, 0.62);       // Kerbe
+  shape.lineTo(w + 0.02, 1.05);
+  shape.lineTo(0, 1.42);              // Spitze
+  shape.lineTo(-w - 0.02, 1.05);
+  shape.lineTo(-w + 0.02, 0.62);
+  shape.lineTo(-w - 0.04, 0.55);
+  shape.lineTo(-w, 0);
+  const bladeGeo = new THREE.ExtrudeGeometry(shape, {
+    depth: 0.03, bevelEnabled: true, bevelThickness: 0.035, bevelSize: 0.035, bevelSegments: 1,
+  });
+  bladeGeo.translate(0, 0, -0.015);
+  part(bladeGeo, steel, sword, [0, 0.3, 0]);
+
+  // Hohlkehle + glühende Rune
+  part(new THREE.BoxGeometry(0.07, 0.8, 0.09), steelDark, sword, [0, 0.78, 0]);
+  part(new THREE.BoxGeometry(0.03, 0.4, 0.1), runeMat, sword, [0, 0.72, 0]);
+
+  return sword;
+}
+
+/**
+ * Übergroßer WoW-Schulterpanzer. `side` = 'L' | 'R'.
+ * Gebaut für die linke Seite, für rechts wird gespiegelt (scale.x = -1).
+ */
+function createPauldron(side) {
+  const root = new THREE.Group();
+  root.name = `Item_Pauldron_${side}`;
+
+  const plate = mat(0x7a2a22, { metalness: 0.35, roughness: 0.55 });   // Horde-Rot
+  const iron = mat(PALETTE.metalDark, { metalness: 0.7, roughness: 0.4 });
+  const gold = mat(PALETTE.gold, { metalness: 0.7, roughness: 0.35 });
+  const bone = mat(PALETTE.tusk, { roughness: 0.6 });
+  const strap = mat(PALETTE.leatherDark);
+
+  // Kuppel (Halbkugel, Low-Poly)
+  part(new THREE.SphereGeometry(0.5, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), plate, root, [0, 0, 0], [0, 0, 0], [1.0, 0.72, 1.05]);
+  // Wulst-Rand
+  part(new THREE.CylinderGeometry(0.54, 0.56, 0.1, 8), iron, root, [0, 0.0, 0]);
+  // Zweite, kleinere Lage Richtung Arm
+  part(new THREE.SphereGeometry(0.4, 8, 3, 0, Math.PI * 2, 0, Math.PI / 2), plate, root, [0.2, -0.16, 0], [0, 0, -0.5], [1, 0.6, 1]);
+  part(new THREE.CylinderGeometry(0.43, 0.45, 0.07, 8), iron, root, [0.2, -0.16, 0], [0, 0, -0.5]);
+
+  // Stacheln (übertrieben groß, typischer WoW-Look)
+  const spikes = [[0.0, 0.32, 0.0, 0.0, 0.62], [0.2, 0.25, 0.2, -0.45, 0.48], [0.2, 0.25, -0.2, -0.45, 0.48], [-0.18, 0.26, 0.0, 0.4, 0.4]];
+  spikes.forEach(([x, y, z, tilt, len]) => {
+    part(new THREE.ConeGeometry(0.09, len, 5), bone, root, [x, y + len / 2 - 0.05, z], [z * 1.2, 0, tilt]);
+    part(new THREE.CylinderGeometry(0.11, 0.12, 0.06, 6), gold, root, [x, y - 0.04, z], [z * 1.2, 0, tilt]);
+  });
+
+  // Nieten am Rand
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    part(new THREE.IcosahedronGeometry(0.035, 0), gold, root, [Math.cos(a) * 0.5, 0.06, Math.sin(a) * 0.52]);
+  }
+  // Lederriemen Richtung Brust
+  part(new THREE.BoxGeometry(0.35, 0.05, 0.1), strap, root, [-0.42, -0.1, 0], [0, 0, 0.5]);
+
+  root.scale.setScalar(0.88);
+  if (side === 'R') root.scale.x *= -1;   // spiegeln
+  return root;
+}
+
+// ---------------------------------------------------------------------
+// 7. ANIMATIONSSYSTEM
+// ---------------------------------------------------------------------
+/*
+   Ein Clip ist ein Objekt mit:
+     sample(t) -> Pose     t = Zeit in Sekunden seit Start des Clips
+     loop      -> boolean  (One-Shots springen danach zurück zum letzten Loop-Clip)
+     duration  -> Sekunden (nur für One-Shots nötig)
+
+   Eine Pose ist ein Objekt { boneName: { rx, ry, rz, px, py, pz } } mit OFFSETS
+   zur Rest-Pose. Fehlende Kanäle = 0. Dadurch lassen sich Posen einfach
+   mischen (Crossfade) und Clips bleiben unabhängig von den Proportionen.
+*/
+const CHANNELS = ['rx', 'ry', 'rz', 'px', 'py', 'pz'];
+
+/** Mischt zwei Posen linear: w=0 -> a, w=1 -> b. */
+function blendPoses(a, b, w) {
+  const out = {};
+  const names = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const n of names) {
+    const pa = a[n] || {}, pb = b[n] || {}, o = {};
+    for (const c of CHANNELS) {
+      const va = pa[c] || 0, vb = pb[c] || 0;
+      if (va || vb) o[c] = va + (vb - va) * w;
+    }
+    out[n] = o;
+  }
+  return out;
+}
+
+/** Cosinus-Ease (weich rein & raus) – Basis aller Keyframe-Übergänge. */
+const easeInOut = (x) => 0.5 - 0.5 * Math.cos(Math.PI * x);
+
+/**
+ * Keyframe-Clip für One-Shots wie den Angriff.
+ * keys: [{ t: Sekunden, pose: {...}, ease?: fn }]  – ease gilt für den Weg ZU diesem Key.
+ */
+function keyframeClip(keys, { loop = false } = {}) {
+  const duration = keys[keys.length - 1].t;
+  return {
+    loop, duration,
+    sample(t) {
+      t = Math.min(t, duration);
+      let i = 1;
+      while (i < keys.length - 1 && keys[i].t < t) i++;
+      const k0 = keys[i - 1], k1 = keys[i];
+      const x = (t - k0.t) / Math.max(1e-6, k1.t - k0.t);
+      return blendPoses(k0.pose, k1.pose, (k1.ease || easeInOut)(Math.min(1, Math.max(0, x))));
+    },
+  };
+}
+
+class Animator {
+  constructor(rig, clips) {
+    this.rig = rig;
+    this.clips = clips;
+    this.current = null;    // { name, clip, time }
+    this.previous = null;   // ausblendender Clip während des Crossfades
+    this.fade = 1;          // 0..1 Fortschritt des Crossfades
+    this.lastLoop = 'idle'; // Ziel für One-Shots
+    this.onChange = () => {};
+  }
+
+  play(name, { restart = false } = {}) {
+    const clip = this.clips[name];
+    if (!clip) throw new Error(`Unbekannter Clip: ${name}`);
+    if (this.current && this.current.name === name && !restart) return;
+    if (clip.loop) this.lastLoop = name;
+    this.previous = this.current;
+    this.current = { name, clip, time: 0 };
+    this.fade = this.previous ? 0 : 1;
+    this.onChange(name);
+  }
+
+  update(dt) {
+    if (!this.current) return;
+    this.current.time += dt;
+    if (this.previous) this.previous.time += dt;
+    this.fade = Math.min(1, this.fade + dt / CONFIG.crossfade);
+
+    let pose = this.current.clip.sample(this.current.time);
+    if (this.previous && this.fade < 1) {
+      pose = blendPoses(this.previous.clip.sample(this.previous.time), pose, easeInOut(this.fade));
+    } else {
+      this.previous = null;
+    }
+    this.apply(pose);
+
+    // One-Shot beendet -> zurück zum letzten Loop (Idle oder Walk)
+    const c = this.current;
+    if (!c.clip.loop && c.time >= c.clip.duration) this.play(this.lastLoop);
+  }
+
+  /** Rest-Pose + Offsets auf alle Bones schreiben. */
+  apply(pose) {
+    for (const [name, bone] of Object.entries(this.rig.bones)) {
+      const o = pose[name] || {};
+      const rr = bone.userData.restRot, rp = bone.userData.restPos;
+      bone.rotation.set(rr.x + (o.rx || 0), rr.y + (o.ry || 0), rr.z + (o.rz || 0));
+      bone.position.set(rp.x + (o.px || 0), rp.y + (o.py || 0), rp.z + (o.pz || 0));
+    }
+  }
+}
+
+// ---------------------------------------------------------------------
+// 8. CLIPS
+// ---------------------------------------------------------------------
+const TAU = Math.PI * 2;
+
+/** a) IDLE – ruhiges, schweres Atmen. Brust hebt sich, Schultern ziehen mit, Arme pendeln leicht. */
+const idleClip = {
+  loop: true,
+  sample(t) {
+    const b = Math.sin(t * TAU / 3.2);           // Atemzyklus 3,2 s
+    const b2 = Math.sin(t * TAU / 3.2 - 0.6);    // leicht verzögert für Schultern/Arme
+    const look = Math.sin(t * TAU / 9.0);        // langsames Umsehen
+    return {
+      hips:        { py: -0.012 + b * 0.012 },
+      spine:       { rx: -b * 0.025 },
+      chest:       { rx: -b * 0.035, py: b * 0.012 },
+      neck:        { rx: b * 0.03 },
+      head:        { ry: look * 0.22, rx: Math.sin(t * TAU / 5.5) * 0.04 },
+      jaw:         { rx: Math.max(0, b) * 0.05 },
+      clavicle_L:  { py: b2 * 0.02, rz: b2 * 0.03 },
+      clavicle_R:  { py: b2 * 0.02, rz: -b2 * 0.03 },
+      upperArm_L:  { rz: b2 * 0.04, rx: Math.sin(t * TAU / 4.1) * 0.03 },
+      upperArm_R:  { rz: -b2 * 0.04, rx: Math.sin(t * TAU / 4.1 + 1) * 0.03 },
+      foreArm_L:   { rx: -b2 * 0.04 },
+      foreArm_R:   { rx: -b2 * 0.04 },
+      // Knie federn das Absenken der Hüfte ab (Füße bleiben am Boden)
+      thigh_L:     { rx: -b * 0.02 }, shin_L: { rx: b * 0.04 }, foot_L: { rx: -b * 0.02 },
+      thigh_R:     { rx: -b * 0.02 }, shin_R: { rx: b * 0.04 }, foot_R: { rx: -b * 0.02 },
+      cloth_F:     { rx: Math.sin(t * TAU / 2.3) * 0.03 },
+      cloth_B:     { rx: Math.sin(t * TAU / 2.7) * 0.03 },
+    };
+  },
+};
+
+/** b) WALK – schwerfälliger Stampfgang auf der Stelle: tiefer Schwerpunkt, seitliches Wanken, Gegenrotation. */
+const WALK_PERIOD = 1.25;  // Sekunden pro Doppelschritt
+const walkClip = {
+  loop: true,
+  sample(t) {
+    const p = t * TAU / WALK_PERIOD;
+    const s = Math.sin(p), c = Math.cos(p);
+    // Aufprall: Hüfte sackt bei jedem Fußaufsatz (2x pro Zyklus) schwer ab
+    const stomp = Math.abs(Math.cos(p));
+    const swingL = Math.max(0, c);    // linkes Bein schwingt nach vorn, wenn c > 0
+    const swingR = Math.max(0, -c);
+
+    return {
+      hips:       { py: -0.07 - stomp * 0.05 + (1 - stomp) * 0.02, rz: s * 0.07, ry: -s * 0.12 },
+      spine:      { rx: 0.06, ry: s * 0.1, rz: -s * 0.04 },
+      chest:      { ry: s * 0.12, rx: stomp * 0.03 },
+      neck:       { ry: -s * 0.12, rz: -s * 0.05 },    // Kopf stabilisiert gegen die Rumpfbewegung
+      head:       { rx: -stomp * 0.04 },
+      clavicle_L: { py: stomp * 0.02 },
+      clavicle_R: { py: stomp * 0.02 },
+
+      // Beine: Oberschenkel pendelt, Knie beugt sich in der Schwungphase, Fuß hält Bodenkontakt
+      thigh_L:    { rx: -s * 0.5 - swingL * 0.12, rz: s * 0.05 },
+      shin_L:     { rx: swingL * 0.75 + 0.08 },
+      foot_L:     { rx: s * 0.3 - swingL * 0.35 },
+      thigh_R:    { rx: s * 0.5 - swingR * 0.12, rz: s * 0.05 },
+      shin_R:     { rx: swingR * 0.75 + 0.08 },
+      foot_R:     { rx: -s * 0.3 - swingR * 0.35 },
+
+      // Arme schwingen gegengleich zu den Beinen, schwer und nach außen
+      upperArm_L: { rx: s * 0.42, rz: 0.06 + stomp * 0.04 },
+      upperArm_R: { rx: -s * 0.42, rz: -0.06 - stomp * 0.04 },
+      foreArm_L:  { rx: -0.15 - Math.max(0, -s) * 0.3 },
+      foreArm_R:  { rx: -0.15 - Math.max(0, s) * 0.3 },
+
+      // Lendenschurz flattert hinter den Beinen her
+      cloth_F:    { rx: -Math.abs(s) * 0.22 - 0.05, rz: s * 0.08 },
+      cloth_B:    { rx: Math.abs(s) * 0.18 + 0.05, rz: s * 0.06 },
+    };
+  },
+};
+
+/**
+ * c) ATTACK – kräftiger Überkopf-Hieb mit dem rechten Arm.
+ * Phasen: Ausholen (Antizipation) -> Schlag (schnell) -> Nachschwingen -> Erholen.
+ */
+const attackClip = keyframeClip([
+  { t: 0.0, pose: {} },
+  // Ausholen: Rumpf dreht rechts nach hinten, Arm weit über den Kopf, Gewicht aufs hintere Bein
+  { t: 0.42, pose: {
+      hips:       { py: -0.04, ry: -0.2, pz: -0.05 },
+      spine:      { rx: -0.25, ry: -0.25 },
+      chest:      { rx: -0.2, ry: -0.3, rz: 0.08 },
+      neck:       { rx: 0.15, ry: 0.35 },
+      head:       { rx: 0.1, ry: 0.15 },
+      jaw:        { rx: 0.35 },                                   // Brüllen
+      clavicle_R: { py: 0.08, rz: -0.2 },
+      upperArm_R: { rx: -2.75, rz: 0.3 },
+      foreArm_R:  { rx: -1.35, rz: 0.1 },
+      hand_R:     { rx: -0.3 },
+      clavicle_L: { py: 0.03 },
+      upperArm_L: { rx: -0.6, rz: 0.35 },
+      foreArm_L:  { rx: -0.7 },
+      thigh_L:    { rx: -0.25 }, shin_L: { rx: 0.2 }, foot_L: { rx: 0.05 },
+      thigh_R:    { rx: 0.15 },  shin_R: { rx: 0.15 }, foot_R: { rx: -0.3 },
+      cloth_F:    { rx: -0.05 }, cloth_B: { rx: 0.1 },
+  } },
+  // Schlag: explosiver Abwärtshieb, Rumpf klappt nach vorn, Schritt nach vorn
+  { t: 0.56, ease: (x) => 1 - Math.cos(x * Math.PI / 2) * Math.cos(x * Math.PI / 2) * (1 - x), pose: {
+      hips:       { py: -0.16, ry: 0.15, pz: 0.12 },
+      spine:      { rx: 0.3, ry: 0.2 },
+      chest:      { rx: 0.25, ry: 0.3, rz: -0.06 },
+      neck:       { rx: -0.3, ry: -0.3 },
+      head:       { rx: -0.1 },
+      jaw:        { rx: 0.4 },
+      clavicle_R: { py: -0.04, rz: 0.1 },
+      upperArm_R: { rx: -1.45, rz: 0.15 },
+      foreArm_R:  { rx: 0.15 },
+      hand_R:     { rx: -0.15 },
+      clavicle_L: { py: -0.02 },
+      upperArm_L: { rx: 0.35, rz: 0.25 },
+      foreArm_L:  { rx: -0.6 },
+      thigh_L:    { rx: -0.55 }, shin_L: { rx: 0.55 }, foot_L: { rx: 0.0 },
+      thigh_R:    { rx: 0.35 },  shin_R: { rx: 0.3 },  foot_R: { rx: -0.35 },
+      cloth_F:    { rx: -0.35 }, cloth_B: { rx: 0.3 },
+  } },
+  // Nachschwingen: Gewicht bleibt unten, kurzes Halten für Wucht
+  { t: 0.82, pose: {
+      hips:       { py: -0.15, ry: 0.12, pz: 0.1 },
+      spine:      { rx: 0.32, ry: 0.18 },
+      chest:      { rx: 0.22, ry: 0.26, rz: -0.05 },
+      neck:       { rx: -0.25, ry: -0.25 },
+      jaw:        { rx: 0.15 },
+      upperArm_R: { rx: -1.15, rz: 0.15 },
+      foreArm_R:  { rx: 0.1 },
+      hand_R:     { rx: 0.1 },
+      upperArm_L: { rx: 0.3, rz: 0.25 },
+      foreArm_L:  { rx: -0.55 },
+      thigh_L:    { rx: -0.5 }, shin_L: { rx: 0.5 },
+      thigh_R:    { rx: 0.32 }, shin_R: { rx: 0.28 }, foot_R: { rx: -0.32 },
+      cloth_F:    { rx: -0.1 }, cloth_B: { rx: 0.08 },
+  } },
+  // Erholen: zurück in die Grundhaltung
+  { t: 1.35, pose: {} },
+]);
+
+// ---------------------------------------------------------------------
+// 9. ZUSAMMENSETZEN, UI & RENDER-LOOP
+// ---------------------------------------------------------------------
+buildArena();
+const orc = buildOrc();
+scene.add(orc.root);
+
+const equipment = new EquipmentManager(orc);
+const animator = new Animator(orc, { idle: idleClip, walk: walkClip, attack: attackClip });
+
+// Platzhalter-Funktionen für das Ausrüsten. Später einfach die Fabrik-Aufrufe
+// durch equipment.equipFromGLTF(...) ersetzen.
+function equipWeapon()     { equipment.equip('hand_R', createSword()); }
+function unequipWeapon()   { equipment.unequip('hand_R'); }
+function equipShoulders()  {
+  equipment.equip('shoulder_L', createPauldron('L'));
+  equipment.equip('shoulder_R', createPauldron('R'));
+}
+function unequipShoulders() { equipment.unequip('shoulder_L'); equipment.unequip('shoulder_R'); }
+
+function toggleSword() {
+  equipment.isEquipped('hand_R') ? unequipWeapon() : equipWeapon();
+  syncToggleButtons();
+}
+function toggleShoulders() {
+  equipment.isEquipped('shoulder_L') ? unequipShoulders() : equipShoulders();
+  syncToggleButtons();
+}
+
+// --- UI-Verdrahtung ---
+const animButtons = document.querySelectorAll('[data-anim]');
+const btnSword = document.getElementById('btn-sword');
+const btnShoulders = document.getElementById('btn-shoulders');
+
+animButtons.forEach(btn => btn.addEventListener('click', () => {
+  const name = btn.dataset.anim;
+  animator.play(name, { restart: name === 'attack' });   // Attack lässt sich erneut auslösen
+}));
+animator.onChange = (name) => animButtons.forEach(b => b.classList.toggle('active', b.dataset.anim === name));
+btnSword.addEventListener('click', toggleSword);
+btnShoulders.addEventListener('click', toggleShoulders);
+
+function syncToggleButtons() {
+  btnSword.classList.toggle('on', equipment.isEquipped('hand_R'));
+  btnShoulders.classList.toggle('on', equipment.isEquipped('shoulder_L'));
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  const map = { '1': 'idle', '2': 'walk', '3': 'attack' };
+  if (map[e.key]) animator.play(map[e.key], { restart: map[e.key] === 'attack' });
+  if (e.key === 's' || e.key === 'S') toggleSword();
+  if (e.key === 'a' || e.key === 'A') toggleShoulders();
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Startzustand: voll ausgerüstet im Idle
+equipWeapon();
+equipShoulders();
+syncToggleButtons();
+animator.play('idle');
+
+// --- Render-Loop (requestAnimationFrame) ---
+const clock = new THREE.Clock();
+function frame() {
+  requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), 1 / 20);   // Tab-Wechsel nicht als Riesensprung behandeln
+  const t = clock.elapsedTime;
+
+  animator.update(dt);
+  equipment.update(dt);
+  torch.intensity = 5.5 + Math.sin(t * 13) * 0.5 + Math.sin(t * 7.3) * 0.6;   // Flackern
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+frame();
+
+// Zugriff von der Browser-Konsole aus (zum Experimentieren / glTF-Tests)
+window.orcWorkspace = { THREE, scene, camera, orc, equipment, animator, createSword, createPauldron };
+</script>
+</body>
+</html>

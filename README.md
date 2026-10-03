@@ -31,6 +31,7 @@ Lokale Vorschau: `python -m http.server -d site`, dann http://localhost:8000/pre
 | `tools/check_cards.js` | Misst für jede Karte, ob ihr Effekt im Kampfprotokoll auftaucht |
 | `tools/balance.js` | Simuliert ganze Saisons ohne Grafik: K.O.-Quote, Prägung, Gesinnung, Attribute |
 | `web/workspace.html` | Seitenvorlage mit Layout und CSS |
+| `web/orc_workspace.html` | Eigenständiger Ork-Charakter-Workspace: Code-Rig, Sockets für Waffe/Schultern, Idle/Walk/Attack, glTF-Anbindung. Direkt im Browser öffnen |
 | `export_project.py` | Architekten-Brücke: alle .py/.json/.js/.html in eine Textdatei (lokal nach ~/Downloads, auf der Website per Knopf in der Statusleiste) |
 
 Jede Änderung bekommt einen Eintrag im Logbuch (`data/state.json` → `logbook`).

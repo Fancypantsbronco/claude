@@ -2,7 +2,7 @@
   "meta": {
     "name": "Chaos Arena",
     "tagline": "Hybrider Auto-Battler & Gladiatoren-Manager nach dem Tabula-Rasa-Prinzip",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "step": 4,
     "updated": "2026-10-03",
     "export_command": "python export_project.py",
@@ -660,6 +660,19 @@
         "Die Kämpferliste bleibt auf schmalen Bildschirmen sichtbar, als kompaktes Raster über der Arena.",
         "Ausweichweg für Safari vor iPadOS 16.4 ohne Importmap-Unterstützung: Dieselbe Szene startet dann mit vollen jsDelivr-ESM-Adressen (build_page.py erzeugt die Variante automatisch).",
         "Kann die 3D-Ansicht nicht starten (Ladefehler, kein WebGL 2), steht der Grund samt Browser-Kennung in der Bühne statt einer leeren Fläche."
+      ]
+    },
+    {
+      "version": "0.4.2",
+      "date": "2026-10-03",
+      "title": "Ork-Charakter-Workspace (eigenständige Testseite)",
+      "changes": [
+        "Neue Datei web/orc_workspace.html: läuft per Doppelklick ohne Build-Schritt, three.js kommt über jsDelivr.",
+        "Ork-Blockout aus Primitives mit hierarchischem Code-Rig (Hüfte → Wirbelsäule → Brust → Schlüsselbein → Oberarm → Unterarm → Hand) im WoW-Stil: breite Schultern, dicker Nacken, angewinkelte Beine, große Fäuste.",
+        "Sockets an rechter/linker Hand und beiden Schultern; EquipmentManager mit equip/unequip und equipFromGLTF für eigene .gltf-Exporte.",
+        "Platzhalter-Items: klobiges Low-Poly-Schwert und übergroße Schulterpanzer.",
+        "Animationssystem mit Crossfade und One-Shots: Idle (Atmen), Walk (schwerer Stampfgang), Attack (Überkopf-Hieb).",
+        "Schwebendes Menü mit Animations- und Ausrüstungs-Knöpfen, Tastenkürzel 1/2/3, S, A."
       ]
     }
   ],
