@@ -245,7 +245,13 @@ async function mountArena() {
   const msg = stage.querySelector('.stage-msg');
   const labelsEl = stage.querySelector('.labels');
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+  } catch (err) {
+    CW.show3dError('WebGL 2 ist in diesem Browser nicht verfügbar (' + err.message + '). three.js 0.169 braucht WebGL 2.');
+    return;
+  }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -559,6 +565,8 @@ async function mountAnimPreview() {
 // ---------------------------------------------------------------- Start
 
 window.ChaosArena3D = { three: THREE.REVISION };
+if (window.__arena3dStarted) throw new Error('arena3d doppelt gestartet');
+window.__arena3dStarted = true;
 window.addEventListener('chaos:view', (e) => {
   if (e.detail.id === 'modelle') requestAnimationFrame(renderThumbs);
   if (e.detail.id === 'animationen') mountAnimPreview();

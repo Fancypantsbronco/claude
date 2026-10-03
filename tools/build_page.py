@@ -33,6 +33,14 @@ MODELS_SRC = os.path.join(ROOT, "assets", "models")
 SITE = os.path.join(ROOT, "site")
 
 INLINE_RE = re.compile(r"/\*\s*@inline\s+(\S+)\s*\*/")
+ESM_RE = re.compile(r"/\*\s*@inline-esm\s+(\S+)\s*\*/")
+
+# Ausweichweg ohne Importmap: bare Importe -> volle jsDelivr-ESM-Adressen
+THREE_ESM = "https://cdn.jsdelivr.net/npm/three@0.169.0/+esm"
+ESM_IMPORTS = [
+    ("from 'three/addons/", "from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"),
+    ("from 'three';", "from '" + THREE_ESM + "';"),
+]
 STATE_MARKER = "/* @state */"
 
 
@@ -50,6 +58,17 @@ def inline_file(match):
     if "</script" in code.lower():
         raise ValueError("%s enthaelt '</script' und kann nicht eingebettet werden" % rel)
     return "/* ---- %s ---- */\n%s" % (rel, code)
+
+
+def inline_esm(match):
+    code = inline_file(match)
+    for old, new in ESM_IMPORTS:
+        code = code.replace(old, new)
+    # Addon-Dateien ueber den +esm-Endpunkt, damit ihr eigenes "import 'three'" aufgeloest wird
+    code = re.sub(r"(https://cdn\.jsdelivr\.net/npm/three@0\.169\.0/examples/jsm/[^']+\.js)'", r"\1/+esm'", code)
+    if "from 'three" in code:
+        raise ValueError("arena3d.js enthaelt noch bare three-Importe")
+    return code
 
 
 def build():
@@ -74,7 +93,8 @@ def build():
     state["asset_stats"] = asset_stats
 
     # 2./3. Vorlage fuellen
-    page = INLINE_RE.sub(inline_file, read(TEMPLATE))
+    page = ESM_RE.sub(inline_esm, read(TEMPLATE))
+    page = INLINE_RE.sub(inline_file, page)
     if page.count(STATE_MARKER) != 1:
         raise SystemExit("Vorlage braucht genau einen %s-Marker" % STATE_MARKER)
     state_json = json.dumps(state, ensure_ascii=False, indent=1).replace("</", "<\\/")

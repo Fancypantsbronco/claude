@@ -988,9 +988,20 @@
   showView();
   requestAnimationFrame((t) => { last = t; loop(t); });
 
+  // Fehler beim Laden der 3D-Ansicht sichtbar machen (z. B. altes Safari, WebGL aus)
+  const loadErrors = [];
+  window.addEventListener('error', (e) => {
+    if (window.ChaosArena3D) return;
+    loadErrors.push(e.message || String(e.error || 'unbekannter Fehler'));
+  });
+  CW.show3dError = (text) => {
+    const msg = $('stage-msg');
+    msg.hidden = false;
+    msg.textContent = text;
+  };
   setTimeout(() => {
     if (window.ChaosArena3D) return;
-    const msg = $('stage-msg');
-    if (msg) msg.textContent = '3D-Ansicht nicht geladen: three.js 0.169 von cdn.jsdelivr.net ist nicht erreichbar. Kampf, Konsole und Auswertung funktionieren trotzdem.';
+    CW.show3dError('3D-Ansicht nicht geladen. ' + (loadErrors.length ? 'Fehler: ' + loadErrors.join(' · ') + '. ' : 'three.js 0.169 von cdn.jsdelivr.net ist nicht erreichbar. ') +
+      'Browser: ' + navigator.userAgent.replace(/^Mozilla\/5\.0 /, '') + '. Kampf, Konsole und Auswertung funktionieren trotzdem.');
   }, 12000);
 })();

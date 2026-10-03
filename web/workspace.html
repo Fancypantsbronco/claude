@@ -336,15 +336,19 @@ select { background: var(--field); color: var(--fg); border: 1px solid var(--lin
     grid-template-areas: "menu" "center" "right" "console" "left" "status"; }
   .editor { grid-template-areas: "menu" "left" "center" "right" "console" "status"; }
   .editor[data-mode="doc"] { grid-template-areas: "menu" "left" "center" "status"; }
-  .left .split { display: none; }
+  /* Kaempferliste bleibt sichtbar, als kompaktes Raster */
+  .left .split { flex: none; }
+  .left .split .scroll { overflow: visible; }
+  .scene-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
   .tree { display: flex; gap: 4px 14px; overflow-x: auto; padding: 4px 12px 8px; }
   .tree-group { flex: none; }
   .tree-group ul { display: flex; }
   .tree a { padding: 3px 8px; white-space: nowrap; }
   .tree .badge { display: none; }
-  .view-live { flex-direction: column; }
+  .view-live { display: block; flex: none; }
 
-  .stage { min-height: 0; aspect-ratio: 4 / 3; }
+  /* feste Hoehe statt Flex: Safari laesst eine Flex-Buehne sonst auf 0 px zusammenfallen */
+  .stage { flex: none; width: 100%; min-height: 0; height: 66vw; max-height: 72vh; }
   .console .scroll { max-height: 260px; }
   .transport { margin-left: 0; }
   .anim-layout { grid-template-columns: minmax(0, 1fr); }
@@ -451,4 +455,19 @@ select { background: var(--field); color: var(--fg); border: 1px solid var(--lin
 </script>
 <script type="module">
 /* @inline web/js/arena3d.js */
+</script>
+<script type="text/plain" id="arena3d-fallback">
+/* @inline-esm web/js/arena3d.js */
+</script>
+<script>
+/* Safari vor iPadOS/iOS 16.4 kennt keine Importmaps: dann dieselbe Szene mit
+   vollen jsDelivr-ESM-Adressen starten (build_page.py ersetzt die Importe). */
+(function () {
+  var ok = window.HTMLScriptElement && HTMLScriptElement.supports && HTMLScriptElement.supports('importmap');
+  if (ok) return;
+  var s = document.createElement('script');
+  s.type = 'module';
+  s.textContent = document.getElementById('arena3d-fallback').textContent;
+  document.body.appendChild(s);
+})();
 </script>

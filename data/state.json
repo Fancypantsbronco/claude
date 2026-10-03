@@ -2,7 +2,7 @@
   "meta": {
     "name": "Chaos Arena",
     "tagline": "Hybrider Auto-Battler & Gladiatoren-Manager nach dem Tabula-Rasa-Prinzip",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "step": 4,
     "updated": "2026-10-03",
     "export_command": "python export_project.py",
@@ -649,6 +649,17 @@
         "Basis-Kartenpool mit 9 Karten (Hornhaut, Schmerz-Echo, Verräter, Kurzsichtiger Berserker, Tornado-Faust, Brillen-Träger, Blutdurst, Ochsenlunge, Adrenalin-Schub). Alle Effekte sind in der Kampf-Engine umgesetzt.",
         "Weniger Widgets: Der Inspector erscheint nur, wenn ein Kämpfer ausgewählt ist. Die Konsole lässt sich einklappen.",
         "Export: Knopf in der Statusleiste lädt den kompletten Code als .txt herunter. export_project.py schreibt lokal nach ~/Downloads."
+      ]
+    },
+    {
+      "version": "0.4.1",
+      "date": "2026-10-03",
+      "title": "Fix: Grafik auf dem iPad",
+      "changes": [
+        "Auf schmalen Bildschirmen (iPad im Hochformat) bekommt die 3D-Bühne eine feste Höhe. Vorher hing sie an einer Flex-Regel, die Safari auf 0 px zusammenfallen lassen kann.",
+        "Die Kämpferliste bleibt auf schmalen Bildschirmen sichtbar, als kompaktes Raster über der Arena.",
+        "Ausweichweg für Safari vor iPadOS 16.4 ohne Importmap-Unterstützung: Dieselbe Szene startet dann mit vollen jsDelivr-ESM-Adressen (build_page.py erzeugt die Variante automatisch).",
+        "Kann die 3D-Ansicht nicht starten (Ladefehler, kein WebGL 2), steht der Grund samt Browser-Kennung in der Bühne statt einer leeren Fläche."
       ]
     }
   ],
