@@ -1,0 +1,237 @@
+{
+  "meta": {
+    "name": "Chaos Arena",
+    "tagline": "Hybrider Auto-Battler & Gladiatoren-Manager nach dem Tabula-Rasa-Prinzip",
+    "version": "0.1.0",
+    "step": 1,
+    "step_label": "Schritt 1 · Workspace, Start-Modelle, Token-Prototyp",
+    "updated": "2026-10-03",
+    "export_command": "python export_project.py",
+    "export_file": "project_export.txt"
+  },
+
+  "teams": {
+    "A": { "id": "A", "name": "Team A", "fighter": "Kämpfer A", "color": "#a8432e", "model": "models/human_team_a.gltf.json" },
+    "B": { "id": "B", "name": "Team B", "fighter": "Kämpfer B", "color": "#3d6a98", "model": "models/human_team_b.gltf.json" }
+  },
+
+  "tokens": [
+    { "id": "damage", "label": "Damage", "source": "Treffer landen", "color": "#c9821b", "active": true },
+    { "id": "chaos", "label": "Chaos", "source": "Ins Leere schlagen", "color": "#7d55a8", "active": true },
+    { "id": "tank", "label": "Tank", "source": "Getroffen werden", "color": "#5c7f53", "active": false, "planned_for": "ab Schritt 2" },
+    { "id": "dark", "label": "Dunkel", "source": "Eigene Leute schlagen", "color": "#4a4f5c", "active": false, "planned_for": "ab Schritt 2" }
+  ],
+
+  "prototype": {
+    "button_label": "Kampf-Aktion würfeln",
+    "reset_label": "Session zurücksetzen",
+    "hit_chance": 0.5,
+    "turn_order": ["A", "B"],
+    "on_hit": "damage",
+    "on_miss": "chaos",
+    "log_templates": {
+      "swing": "{fighter} schlägt zu…",
+      "hit": "Treffer! (+1 {token}-Token generiert)",
+      "miss": "Daneben! (+1 {token}-Token generiert)"
+    },
+    "log_empty": "Noch keine Aktion. Würfle die erste Kampf-Aktion.",
+    "arena_tile": "models/arena_tile.gltf.json"
+  },
+
+  "nav": [
+    {
+      "group": "Arena",
+      "items": [
+        { "id": "live", "label": "Live-Ansicht", "view": "live" },
+        { "id": "kampf-log", "label": "Kampf-Log", "view": "placeholder" },
+        { "id": "token-abrechnung", "label": "Token-Abrechnung", "view": "placeholder" }
+      ]
+    },
+    {
+      "group": "Manager & Hub",
+      "items": [
+        { "id": "roster", "label": "Team-Roster", "view": "placeholder" },
+        { "id": "evolutionen", "label": "Evolutionen", "view": "placeholder" }
+      ]
+    },
+    {
+      "group": "Werkstatt",
+      "items": [
+        { "id": "modelle", "label": "3D-Modelle", "view": "models" },
+        { "id": "animationen", "label": "Animationen", "view": "placeholder" },
+        { "id": "ui", "label": "UI", "view": "placeholder" }
+      ]
+    },
+    {
+      "group": "Projekt",
+      "items": [
+        { "id": "konzept", "label": "Konzept", "view": "concept" },
+        { "id": "roadmap", "label": "Roadmap", "view": "roadmap" },
+        { "id": "logbuch", "label": "Logbuch", "view": "logbook" }
+      ]
+    }
+  ],
+
+  "sections": {
+    "live": {
+      "title": "Live-Ansicht",
+      "lead": "Zwei identische Kämpfer auf der Bodenkachel. Jeder Wurf ist ein unsichtbarer Schlag: 50 % Treffer, 50 % ins Leere. Die Token zählen nur für diese Session."
+    },
+    "kampf-log": {
+      "title": "Kampf-Log",
+      "lead": "Vollständiges Protokoll aller Arena-Runden mit Ziel, Trefferzone und erzeugten Token.",
+      "examples": [
+        "Runde 12 · Kämpfer A trifft Kämpfer B · +1 Damage (A) · +1 Tank (B)",
+        "Runde 13 · Kämpfer B schlägt ins Leere · +1 Chaos (B)",
+        "Runde 14 · Kämpfer A trifft Kämpfer A2 aus dem eigenen Team · +1 Dunkel (A)"
+      ]
+    },
+    "token-abrechnung": {
+      "title": "Token-Abrechnung",
+      "lead": "Token-Stapel pro Kämpfer über alle Runden. Der größte Stapel entscheidet über die Evolution.",
+      "examples": [
+        "Kämpfer A · Damage 41 · Tank 12 · Chaos 30 · Dunkel 3 → größter Stapel: Damage",
+        "Kämpfer B · Damage 18 · Tank 37 · Chaos 22 · Dunkel 0 → größter Stapel: Tank",
+        "Kämpfer C · Damage 9 · Tank 11 · Chaos 48 · Dunkel 14 → größter Stapel: Chaos"
+      ]
+    },
+    "roster": {
+      "title": "Team-Roster",
+      "lead": "Alle Kämpfer pro Team mit Werten, Stapeln und Evolutionsstand.",
+      "examples": [
+        "Kämpfer A · Team A · Stufe 1 · Stärke 1 · Zähigkeit 1 · Geschick 1",
+        "Kämpfer B · Team B · Stufe 1 · Stärke 1 · Zähigkeit 1 · Geschick 1",
+        "Neuzugang · ohne Team · wartet auf erste Arena-Runde"
+      ]
+    },
+    "evolutionen": {
+      "title": "Evolutionen",
+      "lead": "Nach vielen Runden darf ein Kämpfer aus 3 Karten wählen. Welche Karten erscheinen, bestimmt sein größter Token-Stapel.",
+      "examples": [
+        "Damage-Stapel → Schwere Faust · Blutrausch · Knochenbrecher",
+        "Tank-Stapel → Dicke Haut · Standfest · Schmerzresistenz",
+        "Chaos-Stapel → Wilder Schwinger · Unberechenbar · Rundumschlag"
+      ]
+    },
+    "modelle": {
+      "title": "3D-Modelle",
+      "lead": "Per Python-Skript erzeugt (tools/lowpoly.py), als .glb gespeichert und für die Website mit glb2web.py in .gltf.json mit eingebettetem Buffer umgewandelt."
+    },
+    "animationen": {
+      "title": "Animationen",
+      "lead": "Einfache, klobige Bewegungen für die Kämpfer. In Schritt 1 sind alle Modelle statisch.",
+      "examples": [
+        "Leerlauf · leichtes Schwanken, 2 Sekunden Loop",
+        "Blinder Schlag · Arm nach vorne, ohne Zielerfassung",
+        "Taumeln · Reaktion auf einen Treffer"
+      ]
+    },
+    "ui": {
+      "title": "UI",
+      "lead": "Bedienelemente und Anzeigen über der Arena.",
+      "examples": [
+        "Token-Pills über den Köpfen der Kämpfer",
+        "Runden- und Zeitanzeige am Arena-Rand",
+        "Evolutions-Dialog mit 3 Karten"
+      ]
+    },
+    "konzept": {
+      "title": "Konzept",
+      "lead": "Chaos Arena startet bei null: dumme menschliche Kämpfer mit allen Werten auf 1, die blind aufeinander einschlagen. Aus dem, was sie tun, entsteht im Hintergrund ihre Entwicklung."
+    },
+    "roadmap": {
+      "title": "Roadmap",
+      "lead": "Das Spiel wächst Prompt für Prompt. Nur Schritt 1 ist beschlossen, die folgenden Schritte sind ein Vorschlag."
+    },
+    "logbuch": {
+      "title": "Logbuch",
+      "lead": "Jede Änderung am Projekt bekommt hier einen Eintrag."
+    }
+  },
+
+  "concept": {
+    "pillars": [
+      { "title": "Tabula Rasa", "text": "Alle Kämpfer starten identisch: unproportionierte Low-Poly-Menschen, jeder Wert steht auf 1." },
+      { "title": "Das Chaos", "text": "Es gibt keine Freund-Feind-Erkennung. Kämpfer schlagen auf das ein, was vor ihnen steht." },
+      { "title": "Token-System", "text": "Die Engine verbucht jede Aktion im Hintergrund als Token. Daraus ergibt sich, wer ein Kämpfer wird." },
+      { "title": "Evolution", "text": "Nach vielen Arena-Runden bestimmt der größte Token-Stapel, aus welchen 3 Karten ein Kämpfer wählen darf. Später verändert sich dadurch auch sein Aussehen." }
+    ],
+    "token_rules": [
+      { "token": "damage", "rule": "Treffer landen → Damage-Token" },
+      { "token": "tank", "rule": "Getroffen werden → Tank-Token" },
+      { "token": "chaos", "rule": "Ins Leere schlagen → Chaos-Token" },
+      { "token": "dark", "rule": "Eigene Leute schlagen → Dunkel-Token" }
+    ],
+    "style": [
+      { "label": "Grafik", "value": "Stylized Low-Poly, flach schattiert, Vertex-Farben" },
+      { "label": "Kamera", "value": "Isometrisch, 45° gedreht, 30° von oben, orthografisch" },
+      { "label": "Ästhetik", "value": "Rohe Arena, simpel und klobig" },
+      { "label": "Technik", "value": "Modelle per Python als .glb, three.js 0.169 per Importmap" }
+    ]
+  },
+
+  "roadmap": [
+    {
+      "step": 1, "title": "Fundament", "status": "done",
+      "items": ["Workspace mit Navigation und Platzhaltern", "Export-Brücke export_project.py", "Basis-Mensch und Bodenkachel als .glb", "Token-Prototyp: 50/50-Wurf mit Damage- und Chaos-Token"]
+    },
+    {
+      "step": 2, "title": "Echter Schlagabtausch", "status": "proposal",
+      "items": ["Getroffener erhält Tank-Token", "Schlag-Animation und Treffer-Reaktion", "Kampf-Log als eigene Seite"]
+    },
+    {
+      "step": 3, "title": "Blindes Gedränge", "status": "proposal",
+      "items": ["Mehrere Kämpfer pro Team", "Blinde Zielwahl: wer vorne steht, wird geschlagen", "Dunkel-Token bei Treffern im eigenen Team"]
+    },
+    {
+      "step": 4, "title": "Auto-Battler-Runden", "status": "proposal",
+      "items": ["Rundenschleife ohne Klick", "Token-Abrechnung pro Kämpfer", "Team-Roster mit gespeicherten Stapeln"]
+    },
+    {
+      "step": 5, "title": "Evolution", "status": "proposal",
+      "items": ["3-Karten-Auswahl nach größtem Stapel", "Werte steigen über 1", "Optische Veränderung der Modelle"]
+    }
+  ],
+
+  "assets": [
+    {
+      "id": "human_base", "name": "Basis-Mensch", "category": "Kämpfer",
+      "glb": "assets/models/human_base.glb", "web": "models/human_base.gltf.json",
+      "script": "models/build_models.py · build_human()",
+      "description": "Unbewaffneter, plumper Mensch in statischer Pose. Kurze Beine, breiter Rumpf, kleiner Kopf, lange Arme. Neutraler Lendenschurz."
+    },
+    {
+      "id": "human_team_a", "name": "Basis-Mensch · Team A", "category": "Kämpfer",
+      "glb": "assets/models/human_team_a.glb", "web": "models/human_team_a.gltf.json",
+      "script": "models/build_models.py · build_human()",
+      "description": "Identisch zum Basis-Menschen, Lendenschurz in Team-A-Rot."
+    },
+    {
+      "id": "human_team_b", "name": "Basis-Mensch · Team B", "category": "Kämpfer",
+      "glb": "assets/models/human_team_b.glb", "web": "models/human_team_b.gltf.json",
+      "script": "models/build_models.py · build_human()",
+      "description": "Identisch zum Basis-Menschen, Lendenschurz in Team-B-Blau."
+    },
+    {
+      "id": "arena_tile", "name": "Arena-Bodenkachel", "category": "Umgebung",
+      "glb": "assets/models/arena_tile.glb", "web": "models/arena_tile.gltf.json",
+      "script": "models/build_models.py · build_arena_tile()",
+      "description": "Sandfarbene Kachel, 5 × 5 m, leicht uneben, mit schrägem Sockel."
+    }
+  ],
+
+  "logbook": [
+    {
+      "version": "0.1.0",
+      "date": "2026-10-03",
+      "title": "Projektstart: Workspace, Export-Brücke, Start-Modelle, Token-Prototyp",
+      "changes": [
+        "Workspace-Website mit Navigation (Arena, Manager & Hub, Werkstatt, Projekt). Alle Inhalte kommen aus data/state.json.",
+        "export_project.py schreibt alle .py-, .json-, .js- und .html-Dateien mit Datei-Headern in project_export.txt.",
+        "Werkzeuge neu nachgebaut, da die Originale nicht im Repo liegen: tools/lowpoly.py, tools/glb2web.py, tools/build_page.py.",
+        "Start-Modelle per Python: Basis-Mensch (neutral, Team A rot, Team B blau) und Arena-Bodenkachel als .glb.",
+        "Live-Ansicht mit three.js 0.169, isometrischer Orthokamera und dem Würfel-Button. 50/50-Wurf erzeugt Damage- oder Chaos-Token, Zähler pro Session."
+      ]
+    }
+  ]
+}

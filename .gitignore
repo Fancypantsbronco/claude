@@ -1,0 +1,6 @@
+# Build-Ausgaben (entstehen neu mit tools/build_page.py)
+site/
+# Architekten-Export (lokal mit export_project.py erzeugen)
+project_export.txt
+__pycache__/
+*.pyc
