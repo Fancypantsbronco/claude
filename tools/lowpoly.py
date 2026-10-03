@@ -135,75 +135,144 @@ class Mesh:
 
     # ------------------------------------------------------------ Export
 
+    def translated(self, offset):
+        """Kopie mit verschobenen Vertices (z.B. Welt -> lokale Pivot-Koordinaten)."""
+        m = Mesh(self.name)
+        ox, oy, oz = offset
+        m.tris = [tuple((p[0] - ox, p[1] - oy, p[2] - oz) for p in t[:3]) + (t[3],) for t in self.tris]
+        return m
+
     def to_glb(self, extras=None):
-        """Erzeugt eine binaere glTF-2.0-Datei (GLB) als bytes."""
-        if not self.tris:
-            raise ValueError("Mesh '%s' ist leer" % self.name)
-        positions, normals, colors = [], [], []
-        for a, b, c, color in self.tris:
-            n = _normalize(_cross(_sub(b, a), _sub(c, a)))
-            lin = tuple(srgb_to_linear(ch) for ch in color)
-            for p in (a, b, c):
-                positions.extend(p)
-                normals.extend(n)
-                colors.extend(lin)
-
-        count = len(self.tris) * 3
-        pos_bytes = struct.pack("<%df" % len(positions), *positions)
-        nrm_bytes = struct.pack("<%df" % len(normals), *normals)
-        col_bytes = struct.pack("<%df" % len(colors), *colors)
-        binary = pos_bytes + nrm_bytes + col_bytes
-        # min/max exakt aus den float32-Werten, sonst meldet der glTF-Validator Abweichungen
-        f32 = struct.unpack("<%df" % len(positions), pos_bytes)
-        lo = [min(f32[i::3]) for i in range(3)]
-        hi = [max(f32[i::3]) for i in range(3)]
-
-        def view(offset, length):
-            return {"buffer": 0, "byteOffset": offset, "byteLength": length, "target": 34962}
-
-        gltf = {
-            "asset": {"version": "2.0", "generator": "Chaos Arena tools/lowpoly.py"},
-            "scene": 0,
-            "scenes": [{"name": self.name, "nodes": [0]}],
-            "nodes": [{"name": self.name, "mesh": 0}],
-            "meshes": [{
-                "name": self.name,
-                "primitives": [{
-                    "attributes": {"POSITION": 0, "NORMAL": 1, "COLOR_0": 2},
-                    "material": 0,
-                    "mode": 4,
-                }],
-            }],
-            "materials": [{
-                "name": "vertexfarbe_flach",
-                "pbrMetallicRoughness": {
-                    "baseColorFactor": [1, 1, 1, 1],
-                    "metallicFactor": 0.0,
-                    "roughnessFactor": 1.0,
-                },
-            }],
-            "accessors": [
-                {"bufferView": 0, "componentType": 5126, "count": count, "type": "VEC3",
-                 "min": lo, "max": hi},
-                {"bufferView": 1, "componentType": 5126, "count": count, "type": "VEC3"},
-                {"bufferView": 2, "componentType": 5126, "count": count, "type": "VEC3"},
-            ],
-            "bufferViews": [
-                view(0, len(pos_bytes)),
-                view(len(pos_bytes), len(nrm_bytes)),
-                view(len(pos_bytes) + len(nrm_bytes), len(col_bytes)),
-            ],
-            "buffers": [{"byteLength": len(binary)}],
-        }
-        if extras:
-            gltf["extras"] = extras
-        return pack_glb(gltf, binary)
+        """Einzelnes Mesh als binaere glTF-2.0-Datei (GLB)."""
+        return export_glb(self.name, [{"name": self.name, "parent": None,
+                                       "translation": (0.0, 0.0, 0.0), "mesh": self}], extras)
 
     def write_glb(self, path, extras=None):
-        data = self.to_glb(extras)
-        with open(path, "wb") as fh:
-            fh.write(data)
-        return len(data)
+        return _write(path, self.to_glb(extras))
+
+
+class Rig:
+    """Mehrteiliges Modell mit benannten Gelenken (Knoten) fuer Animationen.
+
+    Geometrie wird in Weltkoordinaten modelliert. Jeder Teil bekommt einen Pivot
+    (Drehpunkt, z.B. Schulter); beim Export wird die Geometrie relativ zum Pivot
+    gespeichert und der Knoten relativ zum Eltern-Pivot verschoben. Im Spiel dreht
+    man dann einfach den Knoten (arm_R.rotation.x etc.).
+    """
+
+    def __init__(self, name):
+        self.name = name
+        self.parts = {}
+
+    def part(self, name, pivot, parent=None):
+        if parent is not None and parent not in self.parts:
+            raise ValueError("Eltern-Teil '%s' fehlt" % parent)
+        mesh = Mesh(name)
+        self.parts[name] = {"mesh": mesh, "pivot": tuple(pivot), "parent": parent}
+        return mesh
+
+    def all_tris(self):
+        return [t for p in self.parts.values() for t in p["mesh"].tris]
+
+    def stats(self):
+        m = Mesh(self.name)
+        m.tris = self.all_tris()
+        s = m.stats()
+        s["joints"] = list(self.parts)
+        return s
+
+    def to_glb(self, extras=None):
+        nodes = []
+        for name, p in self.parts.items():
+            parent_pivot = self.parts[p["parent"]]["pivot"] if p["parent"] else (0.0, 0.0, 0.0)
+            nodes.append({
+                "name": name,
+                "parent": p["parent"],
+                "translation": tuple(p["pivot"][i] - parent_pivot[i] for i in range(3)),
+                "mesh": p["mesh"].translated(p["pivot"]),
+            })
+        return export_glb(self.name, nodes, extras)
+
+    def write_glb(self, path, extras=None):
+        return _write(path, self.to_glb(extras))
+
+
+def _write(path, data):
+    with open(path, "wb") as fh:
+        fh.write(data)
+    return len(data)
+
+
+def export_glb(name, parts, extras=None):
+    """parts: Liste von {name, parent (Name oder None), translation, mesh}.
+    Erzeugt einen Wurzelknoten 'name' mit allen Teilen darunter. Flache Normalen,
+    COLOR_0 linear, ein gemeinsames Material."""
+    binary = b""
+    accessors, views, meshes, nodes = [], [], [], [{"name": name, "children": []}]
+    index = {}
+
+    def add_view(data):
+        nonlocal binary
+        views.append({"buffer": 0, "byteOffset": len(binary), "byteLength": len(data), "target": 34962})
+        binary += data
+        return len(views) - 1
+
+    for part in parts:
+        node = {"name": part["name"]}
+        if any(abs(v) > 1e-9 for v in part["translation"]):
+            node["translation"] = [round(v, 6) for v in part["translation"]]
+        mesh = part["mesh"]
+        if mesh.tris:
+            positions, normals, colors = [], [], []
+            for a, b, c, color in mesh.tris:
+                n = _normalize(_cross(_sub(b, a), _sub(c, a)))
+                lin = tuple(srgb_to_linear(ch) for ch in color)
+                for p in (a, b, c):
+                    positions.extend(p)
+                    normals.extend(n)
+                    colors.extend(lin)
+            count = len(mesh.tris) * 3
+            pos_bytes = struct.pack("<%df" % len(positions), *positions)
+            # min/max exakt aus den float32-Werten, sonst meldet der glTF-Validator Abweichungen
+            f32 = struct.unpack("<%df" % len(positions), pos_bytes)
+            base = len(accessors)
+            accessors.append({"bufferView": add_view(pos_bytes), "componentType": 5126, "count": count,
+                              "type": "VEC3", "min": [min(f32[i::3]) for i in range(3)],
+                              "max": [max(f32[i::3]) for i in range(3)]})
+            accessors.append({"bufferView": add_view(struct.pack("<%df" % len(normals), *normals)),
+                              "componentType": 5126, "count": count, "type": "VEC3"})
+            accessors.append({"bufferView": add_view(struct.pack("<%df" % len(colors), *colors)),
+                              "componentType": 5126, "count": count, "type": "VEC3"})
+            meshes.append({"name": part["name"], "primitives": [{
+                "attributes": {"POSITION": base, "NORMAL": base + 1, "COLOR_0": base + 2},
+                "material": 0, "mode": 4}]})
+            node["mesh"] = len(meshes) - 1
+        nodes.append(node)
+        index[part["name"]] = len(nodes) - 1
+
+    for part in parts:
+        parent = index[part["parent"]] if part["parent"] else 0
+        nodes[parent].setdefault("children", []).append(index[part["name"]])
+
+    if not meshes:
+        raise ValueError("Modell '%s' ist leer" % name)
+    gltf = {
+        "asset": {"version": "2.0", "generator": "Chaos Arena tools/lowpoly.py"},
+        "scene": 0,
+        "scenes": [{"name": name, "nodes": [0]}],
+        "nodes": nodes,
+        "meshes": meshes,
+        "materials": [{
+            "name": "vertexfarbe_flach",
+            "pbrMetallicRoughness": {"baseColorFactor": [1, 1, 1, 1], "metallicFactor": 0.0, "roughnessFactor": 1.0},
+        }],
+        "accessors": accessors,
+        "bufferViews": views,
+        "buffers": [{"byteLength": len(binary)}],
+    }
+    if extras:
+        gltf["extras"] = extras
+    return pack_glb(gltf, binary)
 
 
 # ---------------------------------------------------------------- GLB-Container

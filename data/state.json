@@ -2,235 +2,189 @@
   "meta": {
     "name": "Chaos Arena",
     "tagline": "Hybrider Auto-Battler & Gladiatoren-Manager nach dem Tabula-Rasa-Prinzip",
-    "version": "0.1.0",
-    "step": 1,
-    "step_label": "Schritt 1 · Workspace, Start-Modelle, Token-Prototyp",
+    "version": "0.2.0",
+    "step": 2,
     "updated": "2026-10-03",
     "export_command": "python export_project.py",
     "export_file": "project_export.txt"
   },
 
   "teams": {
-    "A": { "id": "A", "name": "Team A", "fighter": "Kämpfer A", "color": "#a8432e", "model": "models/human_team_a.gltf.json" },
-    "B": { "id": "B", "name": "Team B", "fighter": "Kämpfer B", "color": "#3d6a98", "model": "models/human_team_b.gltf.json" }
+    "A": { "id": "A", "name": "Team Rot", "short": "Rot", "color": "#c4533a" },
+    "B": { "id": "B", "name": "Team Blau", "short": "Blau", "color": "#4a82c0" }
+  },
+
+  "roster": [
+    { "id": "A1", "name": "Brakk",  "team": "A", "look": { "skin": "#c99a74", "hair": "irokese", "hair_color": "#2b1d16", "beard": "stoppel", "nose": "knolle", "brows": "wulst", "scar": true } },
+    { "id": "A2", "name": "Olm",    "team": "A", "look": { "skin": "#f0c9a6", "hair": "glatze",  "hair_color": "#b8b2a6", "beard": "voll", "nose": "lang", "brows": "duenn", "scar": false } },
+    { "id": "A3", "name": "Grit",   "team": "A", "look": { "skin": "#8a5a3b", "hair": "zopf",    "hair_color": "#1a1412", "beard": "keiner", "nose": "klein", "brows": "duenn", "scar": false } },
+    { "id": "A4", "name": "Hunold", "team": "A", "look": { "skin": "#e0b48f", "hair": "topf",    "hair_color": "#c46a2a", "beard": "schnauzer", "nose": "knolle", "brows": "wulst", "scar": false } },
+    { "id": "A5", "name": "Mops",   "team": "A", "look": { "skin": "#a8754f", "hair": "seiten",  "hair_color": "#3b2a20", "beard": "kinn", "nose": "klein", "brows": "wulst", "scar": true } },
+    { "id": "B1", "name": "Kasko",  "team": "B", "look": { "skin": "#6b4430", "hair": "stoppeln","hair_color": "#141110", "beard": "voll", "nose": "knolle", "brows": "wulst", "scar": false } },
+    { "id": "B2", "name": "Ulla",   "team": "B", "look": { "skin": "#e0b48f", "hair": "lang",    "hair_color": "#d9b860", "beard": "keiner", "nose": "klein", "brows": "duenn", "scar": false } },
+    { "id": "B3", "name": "Torf",   "team": "B", "look": { "skin": "#c99a74", "hair": "topf",    "hair_color": "#5a3a24", "beard": "stoppel", "nose": "lang", "brows": "duenn", "scar": true } },
+    { "id": "B4", "name": "Rumpel", "team": "B", "look": { "skin": "#f0c9a6", "hair": "seiten",  "hair_color": "#9a9a9a", "beard": "schnauzer", "nose": "knolle", "brows": "wulst", "scar": false } },
+    { "id": "B5", "name": "Zed",    "team": "B", "look": { "skin": "#a8754f", "hair": "irokese", "hair_color": "#7b3a8f", "beard": "keiner", "nose": "lang", "brows": "duenn", "scar": false } }
+  ],
+
+  "rules": {
+    "duration_s": 60,
+    "tick_hz": 30,
+    "base_stats": { "strength": 1, "toughness": 1, "agility": 1 },
+    "hp_base": 20,
+    "hp_per_toughness": 10,
+    "hit_chance": 0.5,
+    "damage_min": 1,
+    "damage_max": 2,
+    "reach_m": 0.95,
+    "cone_deg": 60,
+    "windup_s": 0.5,
+    "recover_s": 0.5,
+    "think_min_s": 0.4,
+    "think_max_s": 1.2,
+    "flail_chance": 0.08,
+    "move_speed_mps": 0.9,
+    "heading_noise_deg": 45,
+    "stagger_s": 0.45,
+    "knockback_m": 0.4,
+    "sight_m": 5,
+    "arena_half_m": 4.6,
+    "body_radius_m": 0.3,
+    "notes": [
+      "Alle Kämpfer starten mit Stärke, Zähigkeit und Geschick 1: 30 Lebenspunkte, 1–2 Schaden pro Treffer, 50 % Trefferchance.",
+      "Ein K.O. braucht im Schnitt 20 Treffer. Getroffene taumeln 0,4 m zurück, darum verteilen sich die Treffer. Laut tools/balance.js endet nur etwa 1 von 500 Kämpfen mit einem K.O.",
+      "Getroffen wird, wer im Moment des Schlags vor dem Angreifer steht. Freund oder Feind spielt keine Rolle."
+    ]
   },
 
   "tokens": [
-    { "id": "damage", "label": "Damage", "source": "Treffer landen", "color": "#c9821b", "active": true },
-    { "id": "chaos", "label": "Chaos", "source": "Ins Leere schlagen", "color": "#7d55a8", "active": true },
-    { "id": "tank", "label": "Tank", "source": "Getroffen werden", "color": "#5c7f53", "active": false, "planned_for": "ab Schritt 2" },
-    { "id": "dark", "label": "Dunkel", "source": "Eigene Leute schlagen", "color": "#4a4f5c", "active": false, "planned_for": "ab Schritt 2" }
+    { "id": "damage", "label": "Damage", "short": "DMG", "source": "Treffer auf einen Gegner", "color": "#e8a33a" },
+    { "id": "tank",   "label": "Tank",   "short": "TNK", "source": "Selbst getroffen werden",  "color": "#6fae5f" },
+    { "id": "chaos",  "label": "Chaos",  "short": "CHS", "source": "Daneben oder ins Leere schlagen", "color": "#a67fd8" },
+    { "id": "dark",   "label": "Dunkel", "short": "DNK", "source": "Treffer auf das eigene Team", "color": "#8a90a3" }
   ],
 
-  "prototype": {
-    "button_label": "Kampf-Aktion würfeln",
-    "reset_label": "Session zurücksetzen",
-    "hit_chance": 0.5,
-    "turn_order": ["A", "B"],
-    "on_hit": "damage",
-    "on_miss": "chaos",
-    "log_templates": {
-      "swing": "{fighter} schlägt zu…",
-      "hit": "Treffer! (+1 {token}-Token generiert)",
-      "miss": "Daneben! (+1 {token}-Token generiert)"
-    },
-    "log_empty": "Noch keine Aktion. Würfle die erste Kampf-Aktion.",
-    "arena_tile": "models/arena_tile.gltf.json"
-  },
-
   "nav": [
-    {
-      "group": "Arena",
-      "items": [
-        { "id": "live", "label": "Live-Ansicht", "view": "live" },
-        { "id": "kampf-log", "label": "Kampf-Log", "view": "placeholder" },
-        { "id": "token-abrechnung", "label": "Token-Abrechnung", "view": "placeholder" }
-      ]
-    },
-    {
-      "group": "Manager & Hub",
-      "items": [
-        { "id": "roster", "label": "Team-Roster", "view": "placeholder" },
-        { "id": "evolutionen", "label": "Evolutionen", "view": "placeholder" }
-      ]
-    },
-    {
-      "group": "Werkstatt",
-      "items": [
-        { "id": "modelle", "label": "3D-Modelle", "view": "models" },
-        { "id": "animationen", "label": "Animationen", "view": "placeholder" },
-        { "id": "ui", "label": "UI", "view": "placeholder" }
-      ]
-    },
-    {
-      "group": "Projekt",
-      "items": [
-        { "id": "konzept", "label": "Konzept", "view": "concept" },
-        { "id": "roadmap", "label": "Roadmap", "view": "roadmap" },
-        { "id": "logbuch", "label": "Logbuch", "view": "logbook" }
-      ]
-    }
+    { "group": "Arena", "items": [
+      { "id": "live", "label": "Live-Ansicht", "view": "live" },
+      { "id": "kampf-log", "label": "Kampf-Log", "view": "combatlog" },
+      { "id": "token-abrechnung", "label": "Token-Abrechnung", "view": "ledger" }
+    ] },
+    { "group": "Manager & Hub", "items": [
+      { "id": "roster", "label": "Team-Roster", "view": "roster" },
+      { "id": "evolutionen", "label": "Evolutionen", "view": "placeholder" }
+    ] },
+    { "group": "Werkstatt", "items": [
+      { "id": "modelle", "label": "3D-Modelle", "view": "models" },
+      { "id": "animationen", "label": "Animationen", "view": "animations" },
+      { "id": "ui", "label": "UI", "view": "placeholder" }
+    ] },
+    { "group": "Projekt", "items": [
+      { "id": "konzept", "label": "Konzept", "view": "concept" },
+      { "id": "roadmap", "label": "Roadmap", "view": "roadmap" },
+      { "id": "logbuch", "label": "Logbuch", "view": "logbook" }
+    ] }
   ],
 
   "sections": {
-    "live": {
-      "title": "Live-Ansicht",
-      "lead": "Zwei identische Kämpfer auf der Bodenkachel. Jeder Wurf ist ein unsichtbarer Schlag: 50 % Treffer, 50 % ins Leere. Die Token zählen nur für diese Session."
-    },
-    "kampf-log": {
-      "title": "Kampf-Log",
-      "lead": "Vollständiges Protokoll aller Arena-Runden mit Ziel, Trefferzone und erzeugten Token.",
-      "examples": [
-        "Runde 12 · Kämpfer A trifft Kämpfer B · +1 Damage (A) · +1 Tank (B)",
-        "Runde 13 · Kämpfer B schlägt ins Leere · +1 Chaos (B)",
-        "Runde 14 · Kämpfer A trifft Kämpfer A2 aus dem eigenen Team · +1 Dunkel (A)"
-      ]
-    },
-    "token-abrechnung": {
-      "title": "Token-Abrechnung",
-      "lead": "Token-Stapel pro Kämpfer über alle Runden. Der größte Stapel entscheidet über die Evolution.",
-      "examples": [
-        "Kämpfer A · Damage 41 · Tank 12 · Chaos 30 · Dunkel 3 → größter Stapel: Damage",
-        "Kämpfer B · Damage 18 · Tank 37 · Chaos 22 · Dunkel 0 → größter Stapel: Tank",
-        "Kämpfer C · Damage 9 · Tank 11 · Chaos 48 · Dunkel 14 → größter Stapel: Chaos"
-      ]
-    },
-    "roster": {
-      "title": "Team-Roster",
-      "lead": "Alle Kämpfer pro Team mit Werten, Stapeln und Evolutionsstand.",
-      "examples": [
-        "Kämpfer A · Team A · Stufe 1 · Stärke 1 · Zähigkeit 1 · Geschick 1",
-        "Kämpfer B · Team B · Stufe 1 · Stärke 1 · Zähigkeit 1 · Geschick 1",
-        "Neuzugang · ohne Team · wartet auf erste Arena-Runde"
-      ]
-    },
+    "live": { "title": "Live-Ansicht", "lead": "5 gegen 5, 60 Sekunden, keine Freund-Feind-Erkennung." },
+    "kampf-log": { "title": "Kampf-Log", "lead": "Jeder Schlag des letzten Kampfes mit Zeit, Wurf und erzeugten Token." },
+    "token-abrechnung": { "title": "Token-Abrechnung", "lead": "Token-Stapel pro Kämpfer, aufsummiert über alle Kämpfe dieser Session. Der größte Stapel entscheidet später über die Evolution." },
+    "roster": { "title": "Team-Roster", "lead": "Zehn Kämpfer, zwei Teams. Alle Werte stehen auf 1, nur das Aussehen unterscheidet sie." },
     "evolutionen": {
       "title": "Evolutionen",
-      "lead": "Nach vielen Runden darf ein Kämpfer aus 3 Karten wählen. Welche Karten erscheinen, bestimmt sein größter Token-Stapel.",
+      "lead": "Nach vielen Kämpfen darf ein Kämpfer aus 3 Karten wählen. Welche Karten erscheinen, bestimmt sein größter Token-Stapel.",
       "examples": [
         "Damage-Stapel → Schwere Faust · Blutrausch · Knochenbrecher",
         "Tank-Stapel → Dicke Haut · Standfest · Schmerzresistenz",
         "Chaos-Stapel → Wilder Schwinger · Unberechenbar · Rundumschlag"
       ]
     },
-    "modelle": {
-      "title": "3D-Modelle",
-      "lead": "Per Python-Skript erzeugt (tools/lowpoly.py), als .glb gespeichert und für die Website mit glb2web.py in .gltf.json mit eingebettetem Buffer umgewandelt."
-    },
-    "animationen": {
-      "title": "Animationen",
-      "lead": "Einfache, klobige Bewegungen für die Kämpfer. In Schritt 1 sind alle Modelle statisch.",
-      "examples": [
-        "Leerlauf · leichtes Schwanken, 2 Sekunden Loop",
-        "Blinder Schlag · Arm nach vorne, ohne Zielerfassung",
-        "Taumeln · Reaktion auf einen Treffer"
-      ]
-    },
+    "modelle": { "title": "3D-Modelle", "lead": "Per Python erzeugt (tools/lowpoly.py), als .glb mit Gelenken gespeichert und mit glb2web.py in .gltf.json mit eingebettetem Buffer umgewandelt." },
+    "animationen": { "title": "Animationen", "lead": "Prozedural in three.js: Die Gelenke der Modelle (Arme, Beine, Rumpf, Kopf) werden pro Frame gedreht. Keine Keyframes, kein Blender." },
     "ui": {
       "title": "UI",
       "lead": "Bedienelemente und Anzeigen über der Arena.",
       "examples": [
-        "Token-Pills über den Köpfen der Kämpfer",
-        "Runden- und Zeitanzeige am Arena-Rand",
-        "Evolutions-Dialog mit 3 Karten"
+        "Evolutions-Dialog mit 3 Karten",
+        "Kamera-Zoom und Verfolgen eines Kämpfers",
+        "Wiederholung eines Kampfes per Seed"
       ]
     },
-    "konzept": {
-      "title": "Konzept",
-      "lead": "Chaos Arena startet bei null: dumme menschliche Kämpfer mit allen Werten auf 1, die blind aufeinander einschlagen. Aus dem, was sie tun, entsteht im Hintergrund ihre Entwicklung."
-    },
-    "roadmap": {
-      "title": "Roadmap",
-      "lead": "Das Spiel wächst Prompt für Prompt. Nur Schritt 1 ist beschlossen, die folgenden Schritte sind ein Vorschlag."
-    },
-    "logbuch": {
-      "title": "Logbuch",
-      "lead": "Jede Änderung am Projekt bekommt hier einen Eintrag."
-    }
+    "konzept": { "title": "Konzept", "lead": "Chaos Arena startet bei null: dumme menschliche Kämpfer mit allen Werten auf 1, die blind aufeinander einschlagen. Aus dem, was sie tun, entsteht im Hintergrund ihre Entwicklung." },
+    "roadmap": { "title": "Roadmap", "lead": "Das Spiel wächst Prompt für Prompt. Erledigte Schritte sind beschlossen, die übrigen sind ein Vorschlag." },
+    "logbuch": { "title": "Logbuch", "lead": "Jede Änderung am Projekt bekommt hier einen Eintrag." }
   },
+
+  "animations": [
+    { "id": "idle", "label": "Stehen", "text": "Leichtes Atmen und Schwanken, Arme hängen." },
+    { "id": "walk", "label": "Laufen", "text": "Beine pendeln gegenläufig zu den Armen, Rumpf wippt mit." },
+    { "id": "swing", "label": "Schlag", "text": "Rechter Arm holt 0,5 s aus, schlägt durch, 0,5 s Erholung. Der Rumpf dreht mit." },
+    { "id": "hit", "label": "Getroffen", "text": "Rumpf und Kopf kippen nach hinten, Körper blitzt kurz auf. 0,45 s Taumeln, laufender Schlag bricht ab." },
+    { "id": "ko", "label": "K.O.", "text": "Kämpfer kippt nach hinten und bleibt liegen." }
+  ],
 
   "concept": {
     "pillars": [
-      { "title": "Tabula Rasa", "text": "Alle Kämpfer starten identisch: unproportionierte Low-Poly-Menschen, jeder Wert steht auf 1." },
-      { "title": "Das Chaos", "text": "Es gibt keine Freund-Feind-Erkennung. Kämpfer schlagen auf das ein, was vor ihnen steht." },
+      { "title": "Tabula Rasa", "text": "Alle Kämpfer haben denselben unproportionierten Körper, jeder Wert steht auf 1. Nur Gesicht, Frisur und Hautton unterscheiden sie." },
+      { "title": "Das Chaos", "text": "Es gibt keine Freund-Feind-Erkennung. Kämpfer schlagen auf das ein, was im Moment des Schlags vor ihnen steht." },
       { "title": "Token-System", "text": "Die Engine verbucht jede Aktion im Hintergrund als Token. Daraus ergibt sich, wer ein Kämpfer wird." },
-      { "title": "Evolution", "text": "Nach vielen Arena-Runden bestimmt der größte Token-Stapel, aus welchen 3 Karten ein Kämpfer wählen darf. Später verändert sich dadurch auch sein Aussehen." }
+      { "title": "Evolution", "text": "Nach vielen Kämpfen bestimmt der größte Token-Stapel, aus welchen 3 Karten ein Kämpfer wählen darf. Später verändert sich dadurch auch sein Körperbau." }
     ],
     "token_rules": [
-      { "token": "damage", "rule": "Treffer landen → Damage-Token" },
-      { "token": "tank", "rule": "Getroffen werden → Tank-Token" },
-      { "token": "chaos", "rule": "Ins Leere schlagen → Chaos-Token" },
-      { "token": "dark", "rule": "Eigene Leute schlagen → Dunkel-Token" }
+      { "token": "damage", "rule": "Treffer auf einen Gegner → Damage-Token für den Angreifer" },
+      { "token": "tank", "rule": "Getroffen werden → Tank-Token für das Opfer" },
+      { "token": "chaos", "rule": "Wurf daneben oder niemand vor einem → Chaos-Token" },
+      { "token": "dark", "rule": "Treffer auf das eigene Team → Dunkel-Token statt Damage-Token" }
     ],
     "style": [
       { "label": "Grafik", "value": "Stylized Low-Poly, flach schattiert, Vertex-Farben" },
       { "label": "Kamera", "value": "Isometrisch, 45° gedreht, 30° von oben, orthografisch" },
       { "label": "Ästhetik", "value": "Rohe Arena, simpel und klobig" },
-      { "label": "Technik", "value": "Modelle per Python als .glb, three.js 0.169 per Importmap" }
+      { "label": "Technik", "value": "Modelle per Python als .glb mit Gelenken, three.js 0.169 per Importmap" }
     ]
   },
 
   "roadmap": [
-    {
-      "step": 1, "title": "Fundament", "status": "done",
-      "items": ["Workspace mit Navigation und Platzhaltern", "Export-Brücke export_project.py", "Basis-Mensch und Bodenkachel als .glb", "Token-Prototyp: 50/50-Wurf mit Damage- und Chaos-Token"]
-    },
-    {
-      "step": 2, "title": "Echter Schlagabtausch", "status": "proposal",
-      "items": ["Getroffener erhält Tank-Token", "Schlag-Animation und Treffer-Reaktion", "Kampf-Log als eigene Seite"]
-    },
-    {
-      "step": 3, "title": "Blindes Gedränge", "status": "proposal",
-      "items": ["Mehrere Kämpfer pro Team", "Blinde Zielwahl: wer vorne steht, wird geschlagen", "Dunkel-Token bei Treffern im eigenen Team"]
-    },
-    {
-      "step": 4, "title": "Auto-Battler-Runden", "status": "proposal",
-      "items": ["Rundenschleife ohne Klick", "Token-Abrechnung pro Kämpfer", "Team-Roster mit gespeicherten Stapeln"]
-    },
-    {
-      "step": 5, "title": "Evolution", "status": "proposal",
-      "items": ["3-Karten-Auswahl nach größtem Stapel", "Werte steigen über 1", "Optische Veränderung der Modelle"]
-    }
+    { "step": 1, "title": "Fundament", "status": "done",
+      "items": ["Workspace und Export-Brücke export_project.py", "Erste Modelle als .glb", "Token-Prototyp mit 50/50-Wurf"] },
+    { "step": 2, "title": "Chaos-Kampf 5 gegen 5", "status": "done",
+      "items": ["10 Kämpfer mit eigenem Gesicht, Frisur und Hautton", "Modelle mit Gelenken und prozeduralen Animationen", "60-Sekunden-Kampf mit blinder Zielwahl und allen 4 Token-Arten", "Auswertung pro Kämpfer, Kampf-Log, Token-Abrechnung", "Workspace im Editor-Look"] },
+    { "step": 3, "title": "Arena-Serie", "status": "proposal",
+      "items": ["Mehrere Kämpfe hintereinander ohne Klick", "Token-Stapel dauerhaft speichern", "Roster mit Verlauf pro Kämpfer"] },
+    { "step": 4, "title": "Evolution", "status": "proposal",
+      "items": ["3-Karten-Auswahl nach größtem Stapel", "Werte steigen über 1", "Körperbau verändert sich mit der Evolution"] }
   ],
 
   "assets": [
-    {
-      "id": "human_base", "name": "Basis-Mensch", "category": "Kämpfer",
+    { "id": "human_base", "name": "Basis-Mensch", "category": "Kämpfer",
       "glb": "assets/models/human_base.glb", "web": "models/human_base.gltf.json",
-      "script": "models/build_models.py · build_human()",
-      "description": "Unbewaffneter, plumper Mensch in statischer Pose. Kurze Beine, breiter Rumpf, kleiner Kopf, lange Arme. Neutraler Lendenschurz."
-    },
-    {
-      "id": "human_team_a", "name": "Basis-Mensch · Team A", "category": "Kämpfer",
-      "glb": "assets/models/human_team_a.glb", "web": "models/human_team_a.gltf.json",
-      "script": "models/build_models.py · build_human()",
-      "description": "Identisch zum Basis-Menschen, Lendenschurz in Team-A-Rot."
-    },
-    {
-      "id": "human_team_b", "name": "Basis-Mensch · Team B", "category": "Kämpfer",
-      "glb": "assets/models/human_team_b.glb", "web": "models/human_team_b.gltf.json",
-      "script": "models/build_models.py · build_human()",
-      "description": "Identisch zum Basis-Menschen, Lendenschurz in Team-B-Blau."
-    },
-    {
-      "id": "arena_tile", "name": "Arena-Bodenkachel", "category": "Umgebung",
-      "glb": "assets/models/arena_tile.glb", "web": "models/arena_tile.gltf.json",
-      "script": "models/build_models.py · build_arena_tile()",
-      "description": "Sandfarbene Kachel, 5 × 5 m, leicht uneben, mit schrägem Sockel."
-    }
+      "script": "models/build_models.py · build_fighter()",
+      "description": "Gemeinsamer Körper aller Kämpfer: weich, unsportlich, kurze Beine, leichter Bauch. Neutraler Lendenschurz, 7 Gelenke." }
   ],
 
   "logbook": [
     {
-      "version": "0.1.0",
-      "date": "2026-10-03",
+      "version": "0.1.0", "date": "2026-10-03",
       "title": "Projektstart: Workspace, Export-Brücke, Start-Modelle, Token-Prototyp",
       "changes": [
-        "Workspace-Website mit Navigation (Arena, Manager & Hub, Werkstatt, Projekt). Alle Inhalte kommen aus data/state.json.",
+        "Workspace-Website mit Navigation. Alle Inhalte kommen aus data/state.json.",
         "export_project.py schreibt alle .py-, .json-, .js- und .html-Dateien mit Datei-Headern in project_export.txt.",
-        "Werkzeuge neu nachgebaut, da die Originale nicht im Repo liegen: tools/lowpoly.py, tools/glb2web.py, tools/build_page.py.",
-        "Start-Modelle per Python: Basis-Mensch (neutral, Team A rot, Team B blau) und Arena-Bodenkachel als .glb.",
-        "Live-Ansicht mit three.js 0.169, isometrischer Orthokamera und dem Würfel-Button. 50/50-Wurf erzeugt Damage- oder Chaos-Token, Zähler pro Session."
+        "Werkzeuge neu nachgebaut: tools/lowpoly.py, tools/glb2web.py, tools/build_page.py.",
+        "Basis-Mensch und Arena-Bodenkachel als .glb, Live-Ansicht mit 50/50-Würfel."
+      ]
+    },
+    {
+      "version": "0.2.0", "date": "2026-10-03",
+      "title": "Chaos-Kampf 5 gegen 5 mit Animationen und Auswertung",
+      "changes": [
+        "Kampf-Engine (web/js/combat.js): 60 Sekunden, feste Zeitschritte, Seed für wiederholbare Kämpfe. Blinde Zielwahl: getroffen wird, wer vor dem Angreifer steht.",
+        "Alle 4 Token-Arten aktiv: Damage, Tank, Chaos, Dunkel. 30 Lebenspunkte und 1–2 Schaden machen einen K.O. in frühen Kämpfen sehr unwahrscheinlich.",
+        "lowpoly.py exportiert jetzt Rigs mit 7 Gelenken. Körper weniger muskulös, dafür 10 Kämpfer mit eigenem Gesicht, Frisur, Bart und Hautton.",
+        "Prozedurale Animationen: Stehen, Laufen, Schlag, Getroffen, K.O. Vorschau in Werkstatt → Animationen.",
+        "Auswertung nach dem Kampf mit Statistiken und Token pro Kämpfer. Kampf-Log, Token-Abrechnung und Team-Roster sind jetzt gefüllt.",
+        "Workspace neu im Engine-Editor-Look: Projekt- und Szenenbaum links, Viewport in der Mitte, Inspector rechts, Konsole unten.",
+        "tools/balance.js simuliert viele Kämpfe ohne Grafik und prüft die Balance (K.O.-Quote, Token pro Kampf)."
       ]
     }
   ]

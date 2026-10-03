@@ -59,7 +59,9 @@ def build():
         info = glb2web.stats(gltf)
         info["glb_bytes"] = os.path.getsize(src)
         info["web_bytes"] = os.path.getsize(dst)
-        info["size_m"] = gltf.get("extras", {}).get("stats", {}).get("size_m")
+        extra_stats = gltf.get("extras", {}).get("stats", {})
+        info["size_m"] = extra_stats.get("size_m")
+        info["joints"] = extra_stats.get("joints")
         asset_stats[web_path] = info
 
     missing = [a["web"] for a in state["assets"] if a["web"] not in asset_stats]
